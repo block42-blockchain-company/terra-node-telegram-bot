@@ -458,8 +458,8 @@ def check_nodes(context):
 
     if message_sent:
         show_home_menu_new_msg(context=context, chat_id=chat_id)
-        
-        
+
+
 def check_node_catch_up_status(context):
     """
     Check if node is some blocks behind with catch up status
@@ -487,7 +487,7 @@ def check_node_catch_up_status(context):
                'Current block height: ' + get_node_block_height()
         context.bot.send_message(chat_id, text)
         show_home_menu_new_msg(context=context, chat_id=chat_id)
-        
+
 
 def check_node_block_height(context):
     """
