@@ -200,6 +200,7 @@ def handle_add_node(update, context):
     if address:
         context.user_data['nodes'][address] = address
 
+    context.bot.send_message(update.effective_chat.id, 'Got it! 👌')
     return show_home_menu_new_msg(update=update, context=context)
 
 
@@ -279,7 +280,7 @@ def show_detail_menu(update, context):
     query = update.callback_query
     address = context.user_data['selected_node_address']
 
-    text = "Node " + address + "\n"
+    text = "Node: " + address + "\n"
     text += "What do you want to do with that Node?"
 
     keyboard = [[
