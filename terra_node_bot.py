@@ -1,7 +1,10 @@
+import atexit
 import os
 import logging
 import re
+import subprocess
 
+import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import BadRequest
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, \
@@ -21,6 +24,21 @@ TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+NODE_STATUSES = ["Unbonded", "Unbonding", "Bonded"]
+
+"""
+######################################################################################################################################################
+Debug Processes
+######################################################################################################################################################
+"""
+
+if DEBUG:
+    mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd="test/")
+
+    def cleanup():
+        mock_api_process.terminate()
+
+    atexit.register(cleanup)
 
 """
 ######################################################################################################################################################
@@ -36,9 +54,9 @@ def setup_existing_user(dispatcher):
 
     chat_ids = dispatcher.user_data.keys()
     for chat_id in chat_ids:
-        #dispatcher.job_queue.run_repeating(node_checks, interval=30, context={
-        #    'chat_id': chat_id, 'user_data': dispatcher.user_data[chat_id]
-        #})
+        dispatcher.job_queue.run_repeating(node_checks, interval=15, context={
+            'chat_id': chat_id, 'user_data': dispatcher.user_data[chat_id]
+        })
         restart_message = 'Hello there!\n' \
                           'Me, your Node Bot of Terra, just got restarted on the server! 🤖\n' \
                           'To make sure you have the latest features, please start ' \
@@ -63,10 +81,10 @@ def start(update, context):
 
     # Start job for user
     if 'job_started' not in context.user_data:
-        #context.job_queue.run_repeating(node_checks, interval=30, context={
-        #    'chat_id': update.message.chat.id,
-        #    'user_data': context.user_data
-        #})
+        context.job_queue.run_repeating(node_checks, interval=15, context={
+            'chat_id': update.message.chat.id,
+            'user_data': context.user_data
+        })
         context.user_data['job_started'] = True
         context.user_data['nodes'] = {}
 
@@ -75,7 +93,7 @@ def start(update, context):
 
     # Send message
     update.message.reply_text(text, parse_mode='markdown')
-    show_home_menu_new_msg(update=update, context=context)
+    show_home_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
 
 @run_async
@@ -85,7 +103,7 @@ def cancel(update, context):
     """
 
     expect(want=None, user_data=context.user_data)
-    show_home_menu_new_msg(update=update, context=context)
+    show_home_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
 
 @run_async
@@ -153,14 +171,15 @@ def error(update, context):
     logger.warning('Update "%s" caused error: %s', update, context.error)
 
 
-def show_home_menu_new_msg(update, context):
+def show_home_menu_new_msg(context, chat_id):
     """
     Send a new message with the home menu
     """
 
-    keyboard = get_home_menu_buttons(context=context)
+    user_data = context.user_data if context.user_data else context.job.context['user_data']
+
+    keyboard = get_home_menu_buttons(user_data=user_data)
     text = 'Choose an address from the list below or add one:'
-    chat_id = update.effective_chat.id
     context.bot.send_message(chat_id, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
@@ -169,7 +188,7 @@ def show_home_menu_edit_msg(update, context):
     Edit current message with the home menu
     """
 
-    keyboard = get_home_menu_buttons(context)
+    keyboard = get_home_menu_buttons(user_data=context.user_data)
     text = 'Choose an address from the list below or add one:'
     query = update.callback_query
     query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -196,12 +215,19 @@ def handle_add_node(update, context):
     """
 
     address = update.message.text
+    node = get_validator(address)
 
-    if address:
-        context.user_data['nodes'][address] = address
+    if node is None:
+        expect('add_node', user_data=context.user_data)
+        return update.message.reply_text(
+            '⛔️ I have not found a Node with this address! ⛔\nPlease try another one. (enter /cancel to return to the menu)')
+
+    context.user_data['nodes'][address] = {}
+    context.user_data['nodes'][address]['status'] = node['status']
+    context.user_data['nodes'][address]['jailed'] = node['jailed']
 
     context.bot.send_message(update.effective_chat.id, 'Got it! 👌')
-    return show_home_menu_new_msg(update=update, context=context)
+    return show_home_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
 
 def node_details(update, context):
@@ -228,7 +254,7 @@ def confirm_node_deletion(update, context):
         InlineKeyboardButton('YES ✅', callback_data='delete_node'),
         InlineKeyboardButton('NO ❌', callback_data='show_detail_menu')
     ]]
-    text = '⚠️ Do you really want to remove the address from your monitoring list? ⚠️\n' + address
+    text = '⚠️ Do you really want to remove the address from your monitoring list? ⚠️\n*' + address + '*'
 
     query = update.callback_query
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
@@ -247,7 +273,7 @@ def delete_node(update, context):
     text = "❌ Node address got deleted! ❌\n" + address
     query.answer(text)
     query.edit_message_text(text)
-    show_home_menu_new_msg(update=update, context=context)
+    show_home_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
 
 """
@@ -257,14 +283,14 @@ Helpers
 """
 
 
-def get_home_menu_buttons(context):
+def get_home_menu_buttons(user_data):
     """
     Return Keyboard buttons for the home menu
     """
 
     keyboard = [[]]
 
-    for address in context.user_data['nodes'].keys():
+    for address in user_data['nodes'].keys():
         keyboard.append([InlineKeyboardButton(address, callback_data='node_details-' + address)])
 
     keyboard.append([InlineKeyboardButton('Add Node', callback_data='add_node')])
@@ -280,7 +306,10 @@ def show_detail_menu(update, context):
     query = update.callback_query
     address = context.user_data['selected_node_address']
 
-    text = "Node: " + address + "\n"
+    text = 'Node: *' + address + '*\n' + \
+           'Status: *' + NODE_STATUSES[context.user_data['nodes'][address]['status']] + '*\n' + \
+           'Jailed: *' + str(context.user_data['nodes'][address]['jailed']) + '*\n\n'
+
     text += "What do you want to do with that Node?"
 
     keyboard = [[
@@ -293,8 +322,107 @@ def show_detail_menu(update, context):
 
 
 def expect(want, user_data):
+    """
+    Set the value which is expected to be entered by the user
+    """
+
     user_data['want'] = want
 
+
+def get_validator(address):
+    """
+    Return json of desired validator node
+    """
+
+    if DEBUG:
+        # Get local validator file
+        response = requests.get('http://localhost:8000/validators.json')
+        nodes = response.json()
+        # Get the right node
+        node = next(filter(lambda node: node['operator_address'] == address, nodes['result']), None)
+        return node
+    else:
+        response = requests.get('https://lcd.terra.dev/staking/validators/' + address)
+        if response.status_code == 200:
+            node = response.json()
+            return node['result']
+        else:
+            return None
+
+
+"""
+######################################################################################################################################################
+Jobs
+######################################################################################################################################################
+"""
+
+
+def node_checks(context):
+    """
+    Periodic checks of various node stats
+    """
+
+    check_nodes(context)
+
+
+def check_nodes(context):
+    """
+    Check all added thornodes for any changes.
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    # Flag to show home buttons or not
+    message_sent = False
+
+    # List to delete entries after loop
+    delete_addresses = []
+
+    # Iterate through all keys
+    for address in user_data['nodes'].keys():
+        remote_node = get_validator(address=address)
+        local_node = user_data['nodes'][address]
+
+        if remote_node is None:
+            text = 'Node is not active anymore! 💀' + '\n' + \
+                   'Address: ' + address + '\n\n' + \
+                   'Please enter another Node address.'
+
+            delete_addresses.append(address)
+
+            # Send message
+            context.bot.send_message(chat_id, text)
+            message_sent = True
+            continue
+
+        # Check which node fields have changed
+        changed_fields = [field for field in ['status', 'jailed'] if
+                          local_node[field] != remote_node[field]]
+
+        # Check if there are any changes
+        if len(changed_fields) > 0:
+            text = 'Node: ' + address + '\n' + \
+                   'Status: ' + NODE_STATUSES[local_node['status']]
+            if 'status' in changed_fields:
+                text += ' ➡️ ' + NODE_STATUSES[remote_node['status']]
+            text += '\nJailed: ' + str(local_node['jailed'])
+            if 'jailed' in changed_fields:
+                text += ' ➡️ ' + str(remote_node['jailed'])
+
+            # Update data
+            local_node['status'] = remote_node['status']
+            local_node['jailed'] = remote_node['jailed']
+
+            # Send message
+            context.bot.send_message(chat_id, text)
+            message_sent = True
+
+    for address in delete_addresses:
+        del user_data['nodes'][address]
+
+    if message_sent:
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
 
 """
 ######################################################################################################################################################
