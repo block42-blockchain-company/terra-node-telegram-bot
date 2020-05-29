@@ -101,6 +101,11 @@ class TerraNodeBot(unittest.TestCase):
         self.assert_delete_address(confirm=False)
 
     def test_node_change_notification_address(self):
+        valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
+        self.assert_add_node(address=valid_address,
+                             expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
+                             expected_response2="Got it! 👌")
+
         with open('validators.json') as json_read_file:
             node_data_original = json.load(json_read_file)
             node_data_new = copy.deepcopy(node_data_original)
@@ -111,19 +116,25 @@ class TerraNodeBot(unittest.TestCase):
             json.dump(node_data_new, json_write_file)
 
         time.sleep(20)
-        first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-        second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
 
         expected_response = 'Node is not active anymore! 💀' + '\n' + \
-                            'Address: ' + node_data_original[0]['node_address'] + '\n\n' + \
+                            'Address: ' + node_data_original['result'][0]['operator_address'] + '\n\n' + \
                             'Please enter another Node address.'
 
-        assert first_response.text.find(expected_response) != -1, \
-            "Expected '" + expected_response + "' but got '" + first_response.text + "'"
-        assert second_response.text == "Choose an address from the list below or add one:", \
-            "Choose an address from the list below or add one: - not visible after node address change notification."
+        self.assertNotEqual(first_response.text.find(expected_response), -1, \
+            "Expected '" + expected_response + "' but got '" + first_response.text + "'")
+        self.assertEqual(second_response.text, "Choose an address from the list below or add one:", \
+            "Choose an address from the list below or add one: - not visible after node address change notification.")
 
     def test_node_change_notification_status(self):
+        valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
+        self.assert_add_node(address=valid_address,
+                             expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
+                             expected_response2="Got it! 👌")
+
         with open('validators.json') as json_read_file:
             node_data_original = json.load(json_read_file)
             node_data_new = copy.deepcopy(node_data_original)
@@ -134,20 +145,26 @@ class TerraNodeBot(unittest.TestCase):
             json.dump(node_data_new, json_write_file)
 
         time.sleep(20)
-        first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-        second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
 
-        expected_response = 'Node: ' + node_data_original[0]['node_address'] + '\n' + \
+        expected_response = 'Node: ' + node_data_original['result'][0]['operator_address'] + '\n' + \
                             'Status: ' + NODE_STATUSES[node_data_original['result'][0]['status']] + \
                             ' ➡️ ' + NODE_STATUSES[node_data_new['result'][0]['status']] + \
                             '\nJailed: ' + str(node_data_original['result'][0]['jailed'])
 
-        assert first_response.text.find(expected_response) != -1, \
-            "Expected '" + expected_response + "' but got '" + first_response.text + "'"
-        assert second_response.text == "Choose an address from the list below or add one:", \
-            "Choose an address from the list below or add one: - not visible after node address change notification."
+        self.assertNotEqual(first_response.text.find(expected_response), -1, \
+            "Expected '" + expected_response + "' but got '" + first_response.text + "'")
+        self.assertEqual(second_response.text, "Choose an address from the list below or add one:", \
+            "Choose an address from the list below or add one: - not visible after node address change notification.")
 
     def test_node_change_notification_jailed(self):
+        valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
+        self.assert_add_node(address=valid_address,
+                             expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
+                             expected_response2="Got it! 👌")
+
         with open('validators.json') as json_read_file:
             node_data_original = json.load(json_read_file)
             node_data_new = copy.deepcopy(node_data_original)
@@ -158,18 +175,19 @@ class TerraNodeBot(unittest.TestCase):
             json.dump(node_data_new, json_write_file)
 
         time.sleep(20)
-        first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-        second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
 
-        expected_response = 'Node: ' + node_data_original[0]['node_address'] + '\n' + \
+        expected_response = 'Node: ' + node_data_original['result'][0]['operator_address'] + '\n' + \
                             'Status: ' + NODE_STATUSES[node_data_original['result'][0]['status']] + \
                             '\nJailed: ' + str(node_data_original['result'][0]['jailed']) + \
-                            ' ➡️ ' + str(node_data_new['result'][0]['status']['jailed'])
+                            ' ➡️ ' + str(node_data_new['result'][0]['jailed'])
 
-        assert first_response.text.find(expected_response) != -1, \
-            "Expected '" + expected_response + "' but got '" + first_response.text + "'"
-        assert second_response.text == "Choose an address from the list below or add one:", \
-            "Choose an address from the list below or add one: - not visible after node address change notification."
+        self.assertNotEqual(first_response.text.find(expected_response), -1, \
+            "Expected '" + expected_response + "' but got '" + first_response.text + "'")
+        self.assertEqual(second_response.text, "Choose an address from the list below or add one:", \
+            "Choose an address from the list below or add one: - not visible after node address change notification.")
 
     """
     --------------------------------------------------------------------------------------------------------
@@ -239,6 +257,36 @@ class TerraNodeBot(unittest.TestCase):
                 second_response = next(self.telegram.iter_history(self.BOT_ID))
                 self.assertNotEqual(second_response.text.find("Node: " + valid_address), -1, \
                     "NO button on single address deletion confirmation does not go back to Node details")
+
+    def assert_node_change_notification(self, field):
+        valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
+        self.assert_add_node(address=valid_address,
+                             expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
+                             expected_response2="Got it! 👌")
+
+        with open('validators.json') as json_read_file:
+            node_data_original = json.load(json_read_file)
+            node_data_new = copy.deepcopy(node_data_original)
+
+        node_data_new['result'][0]['status'] = random.randrange(0, 3)
+
+        with open('validators.json', 'w') as json_write_file:
+            json.dump(node_data_new, json_write_file)
+
+        time.sleep(20)
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+
+        expected_response = 'Node: ' + node_data_original[0]['operator_address'] + '\n' + \
+                            'Status: ' + NODE_STATUSES[node_data_original['result'][0]['status']] + \
+                            ' ➡️ ' + NODE_STATUSES[node_data_new['result'][0]['status']] + \
+                            '\nJailed: ' + str(node_data_original['result'][0]['jailed'])
+
+        self.assertNotEqual(first_response.text.find(expected_response), -1, \
+                            "Expected '" + expected_response + "' but got '" + first_response.text + "'")
+        self.assertEqual(second_response.text, "Choose an address from the list below or add one:", \
+                         "Choose an address from the list below or add one: - not visible after node address change notification.")
 
     """
     --------------------------------------------------------------------------------------------------------
