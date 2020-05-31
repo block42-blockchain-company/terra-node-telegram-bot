@@ -16,9 +16,16 @@ Static and Environment Variables
 ######################################################################################################################################################
 """
 
-
 DEBUG = bool(os.environ['DEBUG'] == 'True') if 'DEBUG' in os.environ else False
 TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
+
+# Set NODE_IP depending on mode (if None, certain node health jobs are not executed)
+if DEBUG:
+    NODE_IP = 'localhost'
+elif 'NODE_IP' in os.environ and os.environ['NODE_IP']:
+    NODE_IP = os.environ['NODE_IP']
+else:
+    NODE_IP = None
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -34,9 +41,11 @@ Debug Processes
 
 if DEBUG:
     mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd="test/")
+    increase_block_height_process = subprocess.Popen(['python3', 'increase_block_height.py'], cwd="test/")
 
     def cleanup():
         mock_api_process.terminate()
+        increase_block_height_process.terminate()
 
     atexit.register(cleanup)
 
@@ -88,8 +97,8 @@ def start(update, context):
         context.user_data['job_started'] = True
         context.user_data['nodes'] = {}
 
-    text = 'Hello there! I am your Node Bot of the Terra network. 🤖\n' \
-           'I will notify you about changes of your node\'s *Sync State*, *Block Height Stuck*, *Jailed* or *Unbonded*!'
+    text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
+           'I will notify you about changes of your node\'s *Catch up Status*, *Block Height Stuck*, *Jailed* or *Unbonded*!'
 
     # Send message
     update.message.reply_text(text, parse_mode='markdown')
@@ -179,7 +188,7 @@ def show_home_menu_new_msg(context, chat_id):
     user_data = context.user_data if context.user_data else context.job.context['user_data']
 
     keyboard = get_home_menu_buttons(user_data=user_data)
-    text = 'Choose an address from the list below or add one:'
+    text = 'I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:'
     context.bot.send_message(chat_id, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
@@ -189,7 +198,7 @@ def show_home_menu_edit_msg(update, context):
     """
 
     keyboard = get_home_menu_buttons(user_data=context.user_data)
-    text = 'Choose an address from the list below or add one:'
+    text = 'I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:'
     query = update.callback_query
     query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -350,6 +359,37 @@ def get_validator(address):
             return None
 
 
+def is_node_catching_up():
+    response = requests.get(url=get_node_status_endpoint())
+    if response.status_code != 200:
+        return True
+
+    status = response.json()
+    return status['result']['sync_info']['catching_up']
+
+
+def get_node_block_height():
+    """
+    Return block height of your Terra Node
+    """
+
+    while True:
+        response = requests.get(url=get_node_status_endpoint())
+        if response.status_code == 200:
+            break
+
+    status = response.json()
+    return status['result']['sync_info']['latest_block_height']
+
+
+def get_node_status_endpoint():
+    """
+    Return the endpoint for block height checks
+    """
+
+    return 'http://localhost:8000/status.json' if DEBUG else 'http://' + NODE_IP + ':26657/status'
+
+
 """
 ######################################################################################################################################################
 Jobs
@@ -363,11 +403,14 @@ def node_checks(context):
     """
 
     check_nodes(context)
+    if NODE_IP:
+        check_node_catch_up_status(context)
+        check_node_block_height(context)
 
 
 def check_nodes(context):
     """
-    Check all added thornodes for any changes.
+    Check all added Terra Nodes for any changes.
     """
 
     chat_id = context.job.context['chat_id']
@@ -423,6 +466,83 @@ def check_nodes(context):
 
     if message_sent:
         show_home_menu_new_msg(context=context, chat_id=chat_id)
+        
+        
+def check_node_catch_up_status(context):
+    """
+    Check if node is some blocks behind with catch up status
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    if 'is_catching_up' not in user_data:
+        user_data['is_catching_up'] = False
+
+    is_currently_catching_up = is_node_catching_up()
+    if user_data['is_catching_up'] == False and is_currently_catching_up:
+        user_data['is_catching_up'] = True
+        text = 'The Node is behind the latest block height and catching up! 💀 ' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Current block height: ' + get_node_block_height() + '\n\n' + \
+               'Please check your Terra Node immediately!'
+        context.bot.send_message(chat_id, text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+    elif user_data['is_catching_up'] == True and not is_currently_catching_up:
+        user_data['is_catching_up'] = False
+        text = 'The node caught up to the latest block height again! 👌' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Current block height: ' + get_node_block_height()
+        context.bot.send_message(chat_id, text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+        
+
+def check_node_block_height(context):
+    """
+    Make sure the block height increases
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    block_height = get_node_block_height()
+
+    # Check if block height got stuck
+    if 'block_height' in user_data and block_height <= user_data['block_height']:
+        # Increase stuck count to know if we already sent a notification
+        user_data['block_height_stuck_count'] += 1
+    else:
+        # Check if we have to send a notification that the Height increases again
+        if 'block_height_stuck_count' in user_data and user_data['block_height_stuck_count'] > 0:
+            text = 'Block height is increasing again! 👌' + '\n' + \
+                   'IP: ' + NODE_IP + '\n' + \
+                   'Block height now at: ' + block_height + '\n'
+            context.bot.send_message(chat_id, text)
+            user_data['block_height_stuck_count'] = -1
+        else:
+            user_data['block_height_stuck_count'] = 0
+
+    # Set current block height
+    user_data['block_height'] = block_height
+
+    # If it just got stuck send a message
+    if user_data['block_height_stuck_count'] == 1:
+        text = 'Block height is not increasing anymore! 💀' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Block height stuck at: ' + block_height + '\n\n' + \
+               'Please check your Terra Node immediately!'
+        context.bot.send_message(chat_id, text)
+
+    # Show buttons if there were changes or block height just got (un)stuck
+    # Stuck count:
+    # 0 == everthings alright
+    # 1 == just got stuck
+    # -1 == just got unstuck
+    # > 1 == still stuck
+
+    if user_data['block_height_stuck_count'] == 1 or user_data['block_height_stuck_count'] == -1:
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+
 
 """
 ######################################################################################################################################################
