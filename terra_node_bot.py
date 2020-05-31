@@ -458,6 +458,83 @@ def check_nodes(context):
 
     if message_sent:
         show_home_menu_new_msg(context=context, chat_id=chat_id)
+        
+        
+def check_node_catch_up_status(context):
+    """
+    Check if node is some blocks behind with catch up status
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    if 'is_catching_up' not in user_data:
+        user_data['is_catching_up'] = False
+
+    is_currently_catching_up = is_node_catching_up()
+    if user_data['is_catching_up'] == False and is_currently_catching_up:
+        user_data['is_catching_up'] = True
+        text = 'The Node is behind the latest block height and catching up! 💀 ' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Current block height: ' + get_node_block_height() + '\n\n' + \
+               'Please check your Terra Node immediately!'
+        context.bot.send_message(chat_id, text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+    elif user_data['is_catching_up'] == True and not is_currently_catching_up:
+        user_data['is_catching_up'] = False
+        text = 'The node caught up to the latest block height again! 👌' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Current block height: ' + get_node_block_height()
+        context.bot.send_message(chat_id, text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+        
+
+def check_node_block_height(context):
+    """
+    Make sure the block height increases
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    block_height = get_node_block_height()
+
+    # Check if block height got stuck
+    if 'block_height' in user_data and block_height <= user_data['block_height']:
+        # Increase stuck count to know if we already sent a notification
+        user_data['block_height_stuck_count'] += 1
+    else:
+        # Check if we have to send a notification that the Height increases again
+        if 'block_height_stuck_count' in user_data and user_data['block_height_stuck_count'] > 0:
+            text = 'Block height is increasing again! 👌' + '\n' + \
+                   'IP: ' + NODE_IP + '\n' + \
+                   'Block height now at: ' + block_height + '\n'
+            context.bot.send_message(chat_id, text)
+            user_data['block_height_stuck_count'] = -1
+        else:
+            user_data['block_height_stuck_count'] = 0
+
+    # Set current block height
+    user_data['block_height'] = block_height
+
+    # If it just got stuck send a message
+    if user_data['block_height_stuck_count'] == 1:
+        text = 'Block height is not increasing anymore! 💀' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Block height stuck at: ' + block_height + '\n\n' + \
+               'Please check your Terra Node immediately!'
+        context.bot.send_message(chat_id, text)
+
+    # Show buttons if there were changes or block height just got (un)stuck
+    # Stuck count:
+    # 0 == everthings alright
+    # 1 == just got stuck
+    # -1 == just got unstuck
+    # > 1 == still stuck
+
+    if user_data['block_height_stuck_count'] == 1 or user_data['block_height_stuck_count'] == -1:
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+
 
 
 def check_node_catch_up_status(context):
