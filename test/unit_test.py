@@ -71,16 +71,10 @@ class TerraNodeBot(unittest.TestCase):
                                          "(enter /cancel to return to the menu)")
 
     def test_assert_add_node_valid_address(self):
-        valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
-        self.assert_add_node(address=valid_address,
-                      expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
-                      expected_response2="Got it! 👌")
+        self.add_valid_address()
 
     def test_node_detail_menu(self):
-        valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
-        self.assert_add_node(address=valid_address,
-                      expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
-                      expected_response2="Got it! 👌")
+        valid_address = self.add_valid_address()
 
         with self.telegram:
             self.click_button(valid_address)
@@ -89,10 +83,7 @@ class TerraNodeBot(unittest.TestCase):
             self.assertNotEqual(response.text.find("Node: " + valid_address), -1, "Click on Address does not show Node detail menu")
 
     def test_back_button_node_detail_menu(self):
-        valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
-        self.assert_add_node(address=valid_address,
-                             expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
-                             expected_response2="Got it! 👌")
+        valid_address = self.add_valid_address()
 
         with self.telegram:
             response = next(self.telegram.iter_history(self.BOT_ID))
@@ -107,137 +98,19 @@ class TerraNodeBot(unittest.TestCase):
 
     def test_node_change_notification_address(self):
         self.assert_node_change_notification("address")
-    #    valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
-    #    self.assert_add_node(address=valid_address,
-    #                         expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
-    #                         expected_response2="Got it! 👌")
-#
-    #    with open('validators.json') as json_read_file:
-    #        node_data_original = json.load(json_read_file)
-    #        node_data_new = copy.deepcopy(node_data_original)
-#
-    #    node_data_new['result'][0]['operator_address'] = "terravaloper" + str(random.randrange(0, 100000))
-#
-    #    with open('validators.json', 'w') as json_write_file:
-    #        json.dump(node_data_new, json_write_file)
-#
-    #    time.sleep(20)
-    #    with self.telegram:
-    #        first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-    #        second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
-#
-    #    expected_response = 'Node is not active anymore! 💀' + '\n' + \
-    #                        'Address: ' + node_data_original['result'][0]['operator_address'] + '\n\n' + \
-    #                        'Please enter another Node address.'
-#
-    #    self.assertNotEqual(first_response.text.find(expected_response), -1, \
-    #        "Expected '" + expected_response + "' but got '" + first_response.text + "'")
-    #    self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
-    #        "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - not visible after node address change notification.")
-#
+
     def test_node_change_notification_status(self):
         self.assert_node_change_notification("status")
-    #    valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
-    #    self.assert_add_node(address=valid_address,
-    #                         expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
-    #                         expected_response2="Got it! 👌")
-#
-    #    with open('validators.json') as json_read_file:
-    #        node_data_original = json.load(json_read_file)
-    #        node_data_new = copy.deepcopy(node_data_original)
-#
-    #    current_status = node_data_original['result'][0]['status']
-    #    while True:
-    #        new_status = random.randrange(0, 3)
-    #        if new_status != current_status:
-    #            break
-#
-    #    node_data_new['result'][0]['status'] = new_status
-#
-    #    with open('validators.json', 'w') as json_write_file:
-    #        json.dump(node_data_new, json_write_file)
-#
-    #    time.sleep(20)
-    #    with self.telegram:
-    #        first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-    #        second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
-#
-    #    expected_response = 'Node: ' + node_data_original['result'][0]['operator_address'] + '\n' + \
-    #                        'Status: ' + NODE_STATUSES[node_data_original['result'][0]['status']] + \
-    #                        ' ➡️ ' + NODE_STATUSES[node_data_new['result'][0]['status']] + \
-    #                        '\nJailed: ' + str(node_data_original['result'][0]['jailed'])
-#
-    #    self.assertNotEqual(first_response.text.find(expected_response), -1, \
-    #        "Expected '" + expected_response + "' but got '" + first_response.text + "'")
-    #    self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
-    #        "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - not visible after node address change notification.")
 
     def test_node_change_notification_jailed(self):
         self.assert_node_change_notification("jailed")
-        #valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
-        #self.assert_add_node(address=valid_address,
-        #                     expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
-        #                     expected_response2="Got it! 👌")
-#
-        #with open('validators.json') as json_read_file:
-        #    node_data_original = json.load(json_read_file)
-        #    node_data_new = copy.deepcopy(node_data_original)
-#
-        #node_data_new['result'][0]['jailed'] = not node_data_new['result'][0]['jailed']
-#
-        #with open('validators.json', 'w') as json_write_file:
-        #    json.dump(node_data_new, json_write_file)
-#
-        #time.sleep(20)
-        #with self.telegram:
-        #    first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-        #    second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
-#
-        #expected_response = 'Node: ' + node_data_original['result'][0]['operator_address'] + '\n' + \
-        #                    'Status: ' + NODE_STATUSES[node_data_original['result'][0]['status']] + \
-        #                    '\nJailed: ' + str(node_data_original['result'][0]['jailed']) + \
-        #                    ' ➡️ ' + str(node_data_new['result'][0]['jailed'])
-#
-        #self.assertNotEqual(first_response.text.find(expected_response), -1, \
-        #    "Expected '" + expected_response + "' but got '" + first_response.text + "'")
-        #self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
-        #    "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - not visible after node address change notification.")
+
+    def test_price_feed_notification(self):
+        self.add_valid_address()
+        self.assert_height_related_notification(monitoring_type="price_feed")
 
     def test_block_height_notification(self):
-        with open('status.json') as json_read_file:
-            node_data = json.load(json_read_file)
-
-        block_height = node_data['result']['sync_info']['latest_block_height']
-        new_block_height = int(block_height) - 200
-        node_data['result']['sync_info']['latest_block_height'] = str(new_block_height)
-
-        with open('status.json', 'w') as json_write_file:
-            json.dump(node_data, json_write_file)
-        time.sleep(15)
-
-        with self.telegram:
-            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
-
-        expected_response = 'Block height is not increasing anymore!'
-
-        self.assertNotEqual(first_response.text.find(expected_response), -1, "Expected '" + expected_response + \
-                                                                  "'\nbut got\n'" + first_response.text + "'")
-        self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list "
-                                 "below or add one:", "I am your Terra Node Bot. 🤖\nChoose an address from the "
-                                 "list below or add one: - not visible after block height notification")
-
-        time.sleep(35)
-        with self.telegram:
-            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
-
-        expected_response = 'Block height is increasing again!'
-
-        self.assertNotEqual(first_response.text.find(expected_response), -1, "Expected '" + expected_response + \
-                                                                  "'\nbut got\n'" + first_response.text + "'")
-        self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
-            "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - not visible after block height notification")
+        self.assert_height_related_notification(monitoring_type="block_height")
 
     def test_catch_up_notification_is_catching_up(self):
         self.assert_catch_up_notification(catching_up=True)
@@ -363,6 +236,60 @@ class TerraNodeBot(unittest.TestCase):
                          "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
                          "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - not visible after node address change notification.")
 
+    def assert_height_related_notification(self, monitoring_type):
+        file_name = ""
+        expected_response1 = ""
+        expected_response2 = ""
+        if monitoring_type == "block_height":
+            file_name = "status.json"
+            expected_response1 = 'Block height is not increasing anymore!'
+            expected_response2 = 'Block height is increasing again!'
+        elif monitoring_type == "price_feed":
+            file_name = "prevotes.json"
+            expected_response1 = 'Price feed is not healthy anymore!'
+            expected_response2 = 'Price feed is healthy again!'
+        else:
+            self.assertTrue(False, "Monitoring monitoring_type does not exist.")
+
+        with open(file_name) as json_read_file:
+            data = json.load(json_read_file)
+
+        if monitoring_type == "block_height":
+            block_height = data['result']['sync_info']['latest_block_height']
+            new_block_height = int(block_height) - 200
+            data['result']['sync_info']['latest_block_height'] = str(new_block_height)
+            with open(file_name, 'w') as json_write_file:
+                json.dump(data, json_write_file)
+            time.sleep(15)
+        elif monitoring_type == "price_feed":
+            for x in range(20):
+                block_height = data['height']
+                new_block_height = int(block_height) + 20
+                data['height'] = str(new_block_height)
+                with open(file_name, 'w') as json_write_file:
+                    json.dump(data, json_write_file)
+                time.sleep(3)
+
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+
+        self.assertNotEqual(first_response.text.find(expected_response1), -1, "Expected '" + expected_response1 + \
+                                                                  "'\nbut got\n'" + first_response.text + "'")
+        self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list "
+                                 "below or add one:", "I am your Terra Node Bot. 🤖\nChoose an address from the "
+                                 "list below or add one: - not visible after block height notification")
+
+        time.sleep(35)
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+
+        self.assertNotEqual(first_response.text.find(expected_response2), -1, "Expected '" + expected_response2 + \
+                                                                  "'\nbut got\n'" + first_response.text + "'")
+        self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
+            "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - not visible after block height notification")
+
     def assert_catch_up_notification(self, catching_up):
         self.set_catch_up_status(catching_up=catching_up)
 
@@ -407,13 +334,16 @@ class TerraNodeBot(unittest.TestCase):
         time.sleep(20)
 
     def click_button(self, button):
-        """
-        Click a button and wait
-        """
-
         response = next(self.telegram.iter_history(self.BOT_ID))
         response.click(button)
         time.sleep(3)
+
+    def add_valid_address(self):
+        valid_address = json.load(open('validators.json'))['result'][0]['operator_address']
+        self.assert_add_node(address=valid_address,
+                             expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
+                             expected_response2="Got it! 👌")
+        return valid_address
 
 
 if __name__ == '__main__':

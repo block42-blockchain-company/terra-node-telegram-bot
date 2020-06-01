@@ -4,8 +4,8 @@ import time
 
 def increase_block_height():
     """
-        Only executed in Debug mode
-        To artificially increase the block height status.json is modified
+    Only executed in Debug mode
+    To artificially increase the block height status.json is modified
     """
 
     print("Increasing local Block Height ...")
