@@ -86,7 +86,7 @@ def start(update, context):
     Send start message and display action buttons.
     """
 
-    expect(want=None, user_data=context.user_data)
+    context.user_data['expected'] = None
 
     # Start job for user
     if 'job_started' not in context.user_data:
@@ -111,7 +111,7 @@ def cancel(update, context):
     Go back to home menu
     """
 
-    expect(want=None, user_data=context.user_data)
+    context.user_data['expected'] = None
     show_home_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
 
@@ -125,7 +125,7 @@ def dispatch_query(update, context):
     query.answer()
     data = query.data
 
-    expect(want=None, user_data=context.user_data)
+    context.user_data['expected'] = None
     edit = True
     call = None
 
@@ -165,9 +165,9 @@ def plain_input(update, context):
     """
     Handle if the users sends a message
     """
-    want = context.user_data['want'] if 'want' in context.user_data else None
-    if want == 'add_node':
-        expect(want=None, user_data=context.user_data)
+    expected = context.user_data['expected'] if 'expected' in context.user_data else None
+    if expected == 'add_node':
+        context.user_data['expected'] = None
         return handle_add_node(update, context)
 
 
@@ -210,7 +210,7 @@ def add_node(update, context):
 
     query = update.callback_query
 
-    expect('add_node', user_data=context.user_data)
+    context.user_data['expected'] = 'add_node'
 
     text = 'What\'s the address of your Node? (enter /cancel to return to the menu)'
 
@@ -227,7 +227,7 @@ def handle_add_node(update, context):
     node = get_validator(address)
 
     if node is None:
-        expect('add_node', user_data=context.user_data)
+        context.user_data['expected'] = 'add_node'
         return update.message.reply_text(
             '⛔️ I have not found a Node with this address! ⛔\nPlease try another one. (enter /cancel to return to the menu)')
 
@@ -328,14 +328,6 @@ def show_detail_menu(update, context):
 
     # Modify message
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-def expect(want, user_data):
-    """
-    Set the value which is expected to be entered by the user
-    """
-
-    user_data['want'] = want
 
 
 def get_validator(address):
