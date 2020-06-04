@@ -1,4 +1,5 @@
 import atexit
+import json
 import os
 import logging
 import re
@@ -42,10 +43,12 @@ Debug Processes
 if DEBUG:
     mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd="test/")
     increase_block_height_process = subprocess.Popen(['python3', 'increase_block_height.py'], cwd="test/")
+    update_local_price_feed = subprocess.Popen(['python3', 'update_price_feed.py'], cwd="test/")
 
     def cleanup():
         mock_api_process.terminate()
         increase_block_height_process.terminate()
+        update_local_price_feed.terminate()
 
     atexit.register(cleanup)
 
@@ -98,7 +101,8 @@ def start(update, context):
         context.user_data['nodes'] = {}
 
     text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
-           'I will notify you about changes of your node\'s *Catch up Status*, *Block Height Stuck*, *Jailed* or *Unbonded*!'
+           'I will notify you about changes of your node\'s *Jailed* or *Unbonded*, ' \
+           'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
 
     # Send message
     update.message.reply_text(text, parse_mode='markdown')
@@ -352,7 +356,8 @@ def get_validator(address):
 
 
 def is_node_catching_up():
-    response = requests.get(url=get_node_status_endpoint())
+    url = get_node_status_endpoint()
+    response = requests.get(url=url)
     if response.status_code != 200:
         return True
 
@@ -372,6 +377,40 @@ def get_node_block_height():
 
     status = response.json()
     return status['result']['sync_info']['latest_block_height']
+
+
+def is_price_feed_healthy(address):
+    """
+    Check whether price feed is working properly
+    """
+
+    prevotes = get_price_feed_prevotes(address)
+
+    if prevotes is None:
+        return False
+
+    for prevote in prevotes['result']:
+        if int(prevote['submit_block']) < int(prevotes['height']) - 5:
+            return False
+
+    return True
+
+
+def get_price_feed_prevotes(address):
+    """
+    Return the current prevotes oracle json
+    """
+
+    if DEBUG:
+        # Get local prevotes file
+        response = requests.get('http://localhost:8000/prevotes.json')
+        return response.json()
+    else:
+        response = requests.get('https://lcd.terra.dev/oracle/voters/' + address + '/prevotes')
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
 
 
 def get_node_status_endpoint():
@@ -394,13 +433,14 @@ def node_checks(context):
     Periodic checks of various node stats
     """
 
-    check_nodes(context)
+    check_node_status(context)
+    check_price_feeder(context)
     if NODE_IP:
         check_node_catch_up_status(context)
         check_node_block_height(context)
 
 
-def check_nodes(context):
+def check_node_status(context):
     """
     Check all added Terra Nodes for any changes.
     """
@@ -458,7 +498,34 @@ def check_nodes(context):
 
     if message_sent:
         show_home_menu_new_msg(context=context, chat_id=chat_id)
-        
+
+
+def check_price_feeder(context):
+    """
+    Check Prevotes to make sure Price Feeder still works
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    for address in user_data['nodes'].keys():
+        if 'is_price_feed_healthy' not in user_data:
+            user_data['is_price_feed_healthy'] = True
+
+        is_price_feed_currently_healthy = is_price_feed_healthy(address)
+        if user_data['is_price_feed_healthy'] == True and not is_price_feed_currently_healthy:
+            user_data['is_price_feed_healthy'] = False
+            text = 'Price feed is not healthy anymore! 💀' + '\n' + \
+                   'Address: ' + address
+            context.bot.send_message(chat_id, text)
+            show_home_menu_new_msg(context, chat_id=chat_id)
+        elif user_data['is_price_feed_healthy'] == False and is_price_feed_currently_healthy:
+            user_data['is_price_feed_healthy'] = True
+            text = 'Price feed is healthy again! 👌' + '\n' + \
+                   'Address: ' + address + '\n'
+            context.bot.send_message(chat_id, text)
+            show_home_menu_new_msg(context, chat_id=chat_id)
+
         
 def check_node_catch_up_status(context):
     """
@@ -488,6 +555,83 @@ def check_node_catch_up_status(context):
         context.bot.send_message(chat_id, text)
         show_home_menu_new_msg(context=context, chat_id=chat_id)
         
+
+def check_node_block_height(context):
+    """
+    Make sure the block height increases
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    block_height = get_node_block_height()
+
+    # Check if block height got stuck
+    if 'block_height' in user_data and block_height <= user_data['block_height']:
+        # Increase stuck count to know if we already sent a notification
+        user_data['block_height_stuck_count'] += 1
+    else:
+        # Check if we have to send a notification that the Height increases again
+        if 'block_height_stuck_count' in user_data and user_data['block_height_stuck_count'] > 0:
+            text = 'Block height is increasing again! 👌' + '\n' + \
+                   'IP: ' + NODE_IP + '\n' + \
+                   'Block height now at: ' + block_height + '\n'
+            context.bot.send_message(chat_id, text)
+            user_data['block_height_stuck_count'] = -1
+        else:
+            user_data['block_height_stuck_count'] = 0
+
+    # Set current block height
+    user_data['block_height'] = block_height
+
+    # If it just got stuck send a message
+    if user_data['block_height_stuck_count'] == 1:
+        text = 'Block height is not increasing anymore! 💀' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Block height stuck at: ' + block_height + '\n\n' + \
+               'Please check your Terra Node immediately!'
+        context.bot.send_message(chat_id, text)
+
+    # Show buttons if there were changes or block height just got (un)stuck
+    # Stuck count:
+    # 0 == everthings alright
+    # 1 == just got stuck
+    # -1 == just got unstuck
+    # > 1 == still stuck
+
+    if user_data['block_height_stuck_count'] == 1 or user_data['block_height_stuck_count'] == -1:
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+
+
+
+def check_node_catch_up_status(context):
+    """
+    Check if node is some blocks behind with catch up status
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    if 'is_catching_up' not in user_data:
+        user_data['is_catching_up'] = False
+
+    is_currently_catching_up = is_node_catching_up()
+    if user_data['is_catching_up'] == False and is_currently_catching_up:
+        user_data['is_catching_up'] = True
+        text = 'The Node is behind the latest block height and catching up! 💀 ' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Current block height: ' + get_node_block_height() + '\n\n' + \
+               'Please check your Terra Node immediately!'
+        context.bot.send_message(chat_id, text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+    elif user_data['is_catching_up'] == True and not is_currently_catching_up:
+        user_data['is_catching_up'] = False
+        text = 'The node caught up to the latest block height again! 👌' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Current block height: ' + get_node_block_height()
+        context.bot.send_message(chat_id, text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+
 
 def check_node_block_height(context):
     """

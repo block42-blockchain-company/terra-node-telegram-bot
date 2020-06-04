@@ -77,8 +77,9 @@ in the `test/` folder.
 To test whether the bot actually notifies you about changes, the data the bot is querying needs to change. 
 You can simulate that by manually editing `test/validators.json` and `test/status.json`.
 
-Furthermore in DEBUG mode a separate process runs `increase_block_height.py` which artificially increases
-the block height so that there are no notifications that the block height got stuck.
+Furthermore in DEBUG mode separate processes run `test/increase_block_height.py` and `test/update_price_feed.py`.
+The former artificially increases the block height so that there are no notifications that the block height got stuck,
+and the latter updates the price feed to prevent faulty notifications about the price feeder.
 ---
 If you are using a Jetbrains IDE (e.g. Pycharm), you can set these environment variables for your run 
 configuration which is very convenient for development 
