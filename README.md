@@ -14,7 +14,7 @@ Install docker and run:
 
 ```
 docker volume create terra-node-bot-volume
-docker run --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --mount source=terra-node-bot-volume,target=/storage terra-node-bot
+docker run -d --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
 ```
 Set 
 - `TELEGRAM_BOT_TOKEN` to your Telegram Bot Token obtained from BotFather.
@@ -130,7 +130,7 @@ docker volume create terra-node-bot-volume
 Finally run the docker container:
 
 ```
-docker run --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --mount source=terra-node-bot-volume,target=/storage terra-node-bot
+docker run --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
 ```
 
 Set the `--env TELEGRAM_BOT_TOKEN` flag to your telegram bot token. 
