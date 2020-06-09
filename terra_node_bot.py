@@ -390,7 +390,7 @@ def is_price_feed_healthy(address):
         return False
 
     for prevote in prevotes['result']:
-        if int(prevote['submit_block']) < int(prevotes['height']) - 5:
+        if int(prevote['submit_block']) < int(prevotes['height']) - 10:
             return False
 
     return True
