@@ -80,6 +80,7 @@ You can simulate that by manually editing `test/validators.json` and `test/statu
 Furthermore in DEBUG mode separate processes run `test/increase_block_height.py` and `test/update_price_feed.py`.
 The former artificially increases the block height so that there are no notifications that the block height got stuck,
 and the latter updates the price feed to prevent faulty notifications about the price feeder.
+
 ---
 If you are using a Jetbrains IDE (e.g. Pycharm), you can set these environment variables for your run 
 configuration which is very convenient for development 
@@ -193,6 +194,7 @@ Keep in mind that the test always deletes the `session.data` file inside `storag
 in order to have fresh starts for every integration test. If you wish to keep your
 persistent data, don't run the tests or comment out 
 the line `os.remove("../storage/session.data")` in `test/unit_test.py`.
+
 ---
 Finally to run the tests open the `test/` folder in your terminal and run
 ```
