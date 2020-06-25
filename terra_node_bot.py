@@ -101,7 +101,7 @@ def start(update, context):
         context.user_data['nodes'] = {}
 
     text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
-           'I will notify you about changes of your node\'s *Jailed* or *Unbonded*, ' \
+           'I will notify you about changes of your node\'s *Jailed*, *Unbonded* or *Delegator Shares*, ' \
            'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
 
     # Send message
@@ -238,6 +238,7 @@ def handle_add_node(update, context):
     context.user_data['nodes'][address] = {}
     context.user_data['nodes'][address]['status'] = node['status']
     context.user_data['nodes'][address]['jailed'] = node['jailed']
+    context.user_data['nodes'][address]['delegator_shares'] = node['delegator_shares']
 
     context.bot.send_message(update.effective_chat.id, 'Got it! 👌')
     return show_home_menu_new_msg(context=context, chat_id=update.effective_chat.id)
@@ -321,7 +322,8 @@ def show_detail_menu(update, context):
 
     text = 'Node: *' + address + '*\n' + \
            'Status: *' + NODE_STATUSES[context.user_data['nodes'][address]['status']] + '*\n' + \
-           'Jailed: *' + str(context.user_data['nodes'][address]['jailed']) + '*\n\n'
+           'Jailed: *' + str(context.user_data['nodes'][address]['jailed']) + '*\n' + \
+           'Delegator Shares: *' + str(int(float(context.user_data['nodes'][address]['delegator_shares']))) + '*\n\n'
 
     text += "What do you want to do with that Node?"
 
@@ -472,25 +474,30 @@ def check_node_status(context):
             continue
 
         # Check which node fields have changed
-        changed_fields = [field for field in ['status', 'jailed'] if
+        changed_fields = [field for field in ['status', 'jailed', 'delegator_shares'] if
                           local_node[field] != remote_node[field]]
 
         # Check if there are any changes
         if len(changed_fields) > 0:
-            text = 'Node: ' + address + '\n' + \
-                   'Status: ' + NODE_STATUSES[local_node['status']]
+            text = 'Node: *' + address + '*\n' + \
+                   'Status: *' + NODE_STATUSES[local_node['status']]
             if 'status' in changed_fields:
-                text += ' ➡️ ' + NODE_STATUSES[remote_node['status']]
-            text += '\nJailed: ' + str(local_node['jailed'])
+                text += '* ➡️ *' + NODE_STATUSES[remote_node['status']]
+            text += '*\nJailed: *' + str(local_node['jailed'])
             if 'jailed' in changed_fields:
-                text += ' ➡️ ' + str(remote_node['jailed'])
+                text += '* ➡️ *' + str(remote_node['jailed'])
+            text += '*\nDelegator Shares: *' + str(int(float(local_node['delegator_shares'])))
+            if 'delegator_shares' in changed_fields:
+                text += '* ➡️ *' + str(int(float(remote_node['delegator_shares'])))
+            text += '*'
 
             # Update data
             local_node['status'] = remote_node['status']
             local_node['jailed'] = remote_node['jailed']
+            local_node['delegator_shares'] = remote_node['delegator_shares']
 
             # Send message
-            context.bot.send_message(chat_id, text)
+            context.bot.send_message(chat_id, text, parse_mode='markdown')
             message_sent = True
 
     for address in delete_addresses:

@@ -105,6 +105,9 @@ class TerraNodeBot(unittest.TestCase):
     def test_node_change_notification_jailed(self):
         self.assert_node_change_notification("jailed")
 
+    def test_node_change_notification_delegator_shares(self):
+        self.assert_node_change_notification("delegator_shares")
+
     def test_price_feed_notification(self):
         self.add_valid_address()
         self.assert_height_related_notification(monitoring_type="price_feed")
@@ -117,6 +120,7 @@ class TerraNodeBot(unittest.TestCase):
 
     def test_catch_up_notification_is_not_catching_up(self):
         self.assert_catch_up_notification(catching_up=False)
+
 
     """
     --------------------------------------------------------------------------------------------------------
@@ -219,8 +223,15 @@ class TerraNodeBot(unittest.TestCase):
                                 'Status: ' + NODE_STATUSES[node_data_original['result'][0]['status']] + \
                                 ' ➡️ ' + NODE_STATUSES[node_data_new['result'][0]['status']] + \
                                 '\nJailed: ' + str(node_data_original['result'][0]['jailed'])
+        elif field == "delegator_shares":
+            node_data_new['result'][0]['delegator_shares'] = float(node_data_original['result'][0]['delegator_shares']) + 1
+            expected_response = 'Node: ' + node_data_original['result'][0]['operator_address'] + '\n' + \
+                                'Status: ' + NODE_STATUSES[node_data_original['result'][0]['status']] + \
+                                '\nJailed: ' + str(node_data_original['result'][0]['jailed']) + \
+                                '\nDelegator Shares: ' + str(int(float(node_data_original['result'][0]['delegator_shares']))) + \
+                                ' ➡️ ' + str(int(float(node_data_new['result'][0]['delegator_shares'])))
         else:
-            self.assertTrue(False, "The argument 'field' that you passed to assert_node_change_notification is not defined")
+            self.assertTrue(False, "The argument" + field + "that you passed as 'field' to assert_node_change_notification is not defined")
 
         with open('validators.json', 'w') as json_write_file:
             json.dump(node_data_new, json_write_file)
