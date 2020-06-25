@@ -2,14 +2,23 @@
 
 A telegram bot to monitor the status of Terra Nodes.
 
-If you have questions feel free to open a github issue or contact us in our Telegram Channel https://t.me/block42_crypto!
+Features:
+* Monitor **remote nodes**
+* Monitor your own **local node**
+* Notifications about changes of your node\'s **Jailed**, **Unbonded** or **Delegator Shares** attributes
+* Notifications if your **Block Height** gets stuck
+* Notifications if **Price Feed** gets unhealthy
+* Notifications about new **Governance Proposals**
 
-## Requirements
+If you have questions please open a [github](https://github.com/block42-blockchain-company/terra-node-telegram-bot/issues) 
+issue or contact us in our [Telegram Channel](https://t.me/block42_crypto!)!
+
+## [Requirements](#requirements)
 * Telegram
 * Docker (if you want to run with docker)
 * Python3 (if you want to run without docker)
 
-## Quickstart
+## [Quickstart](#quickstart)
 Install docker and run:
 
 ```
@@ -21,24 +30,29 @@ Set
 - `NODE_IP` to any IP you want to monitor (or `localhost`). 
 Leave it empty or remove it to only monitor public Node information.
 
-## Steps to run everything yourself
-* Install dependencies
-* Create Telegram bot token via [BotFather](https://t.me/BotFather)
-* Set environment variables
-* Start the bot
-* Run & test the bot
-* Production
-* Testing
+## [Steps to run everything yourself](#steps-to-run-everything-yourself)
+* [Install dependencies](#install-dependencies)
+* [Create Telegram bot token](#create-telegram-bot-token-via-botfather) via [BotFather]((https://t.me/BotFather))
+* [Set environment variables](#set-environment-variables)
+* [Start the bot](#start-the-bot)
+* [Run and test the bot](#run-and-test-the-bot)
+* [Production](#production)
+  * [Docker](#docker)
+* [Testing](#testing)
+  * [Create new Telegram Client](#create-new-telegram-client)
+  * [Sign in to the new Telegram Client](#sign-in-to-the-new-telegram-client)
+  * [Install Pytest](#install-pytest)
+  * [Run the tests](#run-the-tests)
 
-## Install dependencies
+## [Install dependencies](#install-dependencies)
 Install all required dependencies via: `pip install -r requirements.txt`
 
-## Create Telegram bot token via BotFather
+## [Create Telegram bot token via BotFather](#create-telegram-bot-token-via-botfather)
 Start a Telegram chat with [BotFather](https://t.me/BotFather) and click `start`.
 
 Then send `/newbot` in the chat, and follow the given steps to create a new telegram token. Save this token, you will need it in a second.
 
-## Set environment variables
+## [Set environment variables](#set-environment-variables)
 Set the telegram bot token you just created as an environment variable: `TELEGRAM_BOT_TOKEN`
 
 ```
@@ -86,7 +100,7 @@ If you are using a Jetbrains IDE (e.g. Pycharm), you can set these environment v
 configuration which is very convenient for development 
 (see: https://stackoverflow.com/questions/42708389/how-to-set-environment-variables-in-pycharm).
 
-## Start the bot
+## [Start the bot](#start-the-bot)
 Start the bot via:
 
 ```
@@ -95,7 +109,7 @@ python3 terra_node_bot.py
 
 Make sure that you see a message in the console which indicates that the bot is running.
 
-## Run & test the bot
+## [Run and test the bot](#run-and-test-the-bot)
 When you created the telegram bot token via BotFather, you gave your bot a certain name (e.g. `terranode_bot`). 
 Now search for this name in Telegram, open the chat and hit start!
 
@@ -106,12 +120,12 @@ Once you stop and restart the bot, everything should continue as if the bot was 
 
 If you want to reset your bot's data, simply delete the file `session.data` in the `storage` directory before startup.
 
-## Production
+## [Production](#production)
 In production you do not want to use mock data from the local endpoint but real network data. 
 To get real data just set `DEBUG=False` and all other environment variables as 
-described in the 'Set environment variables' section.
+described in the [Set environment variables](#set-environment-variables) section.
 
-### Docker
+### [Docker](#docker)
 To run the bot as a docker container, make sure you have docker installed (see: https://docs.docker.com/get-docker).
 
 Navigate to the root directory of this repository and execute the following commands:
@@ -147,9 +161,9 @@ This is the directory where your bot saves and retrieves the `session.data` file
 there is not the possibility for the `DEBUG` mode when using docker.*
 
 
-## Testing
+## [Testing](#testing)
 
-### Create new Telegram Client
+### [Create new Telegram Client](#create-new-telegram-client)
 To test the Terra Node Monitoring Bot, first you need to impersonate your own Telegram Client programmatically.
 
 To do that, you need to obtain your API ID and API hash by creating a 
@@ -163,7 +177,7 @@ Also save the name of your Telegram Bot without the preceding `@`
 in the `TELEGRAM_BOT_ID` environment variable (e.g. if your bot is named 
 `@terra_node_test_bot`, save `terra_node_test_bot` in `TELEGRAM_BOT_ID`).
 
-### Sign in to the new Telegram Client
+### [Sign in to the new Telegram Client](#sign-in-to-the-new-telegram-client)
 You need to authenticate your new Telegram client with your phone number once to
 receive an authentication string.
 This cannot be done during the unit test run, that's why there's the separate script
@@ -179,16 +193,16 @@ Once finished, the script stores the authentication string in `test/telegram_ses
 which can be used for the tests.
 
 
-### Install Pytest
+### [Install Pytest](#install-pytest)
 We use `pytest` as the test runner for the tests.
 Install `pytest` in the root folder of the repo via:
 ```
 pip install pytest
 ```
 
-### Run the tests
+### [Run the tests](#run-the-tests)
 You also need to set the `TELEGRAM_BOT_TOKEN` environment variable with your 
-telegram bot token and set `DEBUG=True` as explained in previous sections.
+telegram bot token and set `DEBUG=True` as explained in the [Set environment variables](#set-environment-variables) section.
 
 Keep in mind that the test always deletes the `session.data` file inside `storage/`
 in order to have fresh starts for every integration test. If you wish to keep your
