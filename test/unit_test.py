@@ -121,6 +121,29 @@ class TerraNodeBot(unittest.TestCase):
     def test_catch_up_notification_is_not_catching_up(self):
         self.assert_catch_up_notification(catching_up=False)
 
+    def test_new_governance_proposal_notification(self):
+        with open('governance_proposals.json') as json_read_file:
+            governance_proposals = json.load(json_read_file)
+            governance_proposals_new = copy.deepcopy(governance_proposals)
+
+        new_proposal = governance_proposals['result'][random.randrange(0, 8)]
+        governance_proposals_new['result'].append(new_proposal)
+
+        time.sleep(20)
+        with open('governance_proposals.json', 'w') as json_write_file:
+            json.dump(governance_proposals_new, json_write_file)
+        time.sleep(20)
+
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+
+        self.assertNotEqual(first_response.text.find(new_proposal['content']['value']['title']), -1, \
+                            "Expected '" + json.dumps(new_proposal) + "' but got '" + first_response.text + "'")
+        self.assertEqual(second_response.text,
+                         "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
+                         "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - "
+                         "not visible after node address change notification.")
 
     """
     --------------------------------------------------------------------------------------------------------
@@ -273,13 +296,13 @@ class TerraNodeBot(unittest.TestCase):
                 json.dump(data, json_write_file)
             time.sleep(15)
         elif monitoring_type == "price_feed":
-            for x in range(20):
+            for x in range(40):
                 block_height = data['height']
                 new_block_height = int(block_height) + 20
                 data['height'] = str(new_block_height)
                 with open(file_name, 'w') as json_write_file:
                     json.dump(data, json_write_file)
-                time.sleep(3)
+                time.sleep(1)
 
         with self.telegram:
             first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))

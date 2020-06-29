@@ -4,6 +4,7 @@ import os
 import logging
 import re
 import subprocess
+from datetime import datetime
 
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -103,6 +104,7 @@ def start(update, context):
     text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
            'I will notify you about changes of your node\'s *Jailed*, *Unbonded* or *Delegator Shares*, ' \
            'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
+           'Moreover, I will notify you about new governance proposals!'
 
     # Send message
     update.message.reply_text(text, parse_mode='markdown')
@@ -415,12 +417,34 @@ def get_price_feed_prevotes(address):
             return None
 
 
+def get_governance_proposals():
+    """
+    Return all governance proposals
+    """
+
+    while True:
+        response = requests.get(url=get_governance_proposal_endpoint())
+        if response.status_code == 200:
+            break
+
+    governance_proposals = response.json()
+    return governance_proposals['result']
+
+
 def get_node_status_endpoint():
     """
     Return the endpoint for block height checks
     """
 
     return 'http://localhost:8000/status.json' if DEBUG else 'http://' + NODE_IP + ':26657/status'
+
+
+def get_governance_proposal_endpoint():
+    """
+    Return the endpoint of governance proposals
+    """
+
+    return 'http://localhost:8000/governance_proposals.json' if DEBUG else 'https://lcd.terra.dev/gov/proposals'
 
 
 """
@@ -437,6 +461,7 @@ def node_checks(context):
 
     check_node_status(context)
     check_price_feeder(context)
+    check_governance_proposals(context)
     if NODE_IP:
         check_node_catch_up_status(context)
         check_node_block_height(context)
@@ -610,80 +635,48 @@ def check_node_block_height(context):
         show_home_menu_new_msg(context=context, chat_id=chat_id)
 
 
-
-def check_node_catch_up_status(context):
+def check_governance_proposals(context):
     """
-    Check if node is some blocks behind with catch up status
+    Monitoring related to governance proposals
     """
 
-    chat_id = context.job.context['chat_id']
-    user_data = context.job.context['user_data']
-
-    if 'is_catching_up' not in user_data:
-        user_data['is_catching_up'] = False
-
-    is_currently_catching_up = is_node_catching_up()
-    if user_data['is_catching_up'] == False and is_currently_catching_up:
-        user_data['is_catching_up'] = True
-        text = 'The Node is behind the latest block height and catching up! 💀 ' + '\n' + \
-               'IP: ' + NODE_IP + '\n' + \
-               'Current block height: ' + get_node_block_height() + '\n\n' + \
-               'Please check your Terra Node immediately!'
-        context.bot.send_message(chat_id, text)
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
-    elif user_data['is_catching_up'] == True and not is_currently_catching_up:
-        user_data['is_catching_up'] = False
-        text = 'The node caught up to the latest block height again! 👌' + '\n' + \
-               'IP: ' + NODE_IP + '\n' + \
-               'Current block height: ' + get_node_block_height()
-        context.bot.send_message(chat_id, text)
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
+    check_new_goverance_proposal(context)
 
 
-def check_node_block_height(context):
+def check_new_goverance_proposal(context):
     """
-    Make sure the block height increases
+    Notify the user if there's a new governance proposals
     """
 
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
 
-    block_height = get_node_block_height()
+    governance_proposals = get_governance_proposals()
+    governance_proposals_count = len(governance_proposals)
 
-    # Check if block height got stuck
-    if 'block_height' in user_data and block_height <= user_data['block_height']:
-        # Increase stuck count to know if we already sent a notification
-        user_data['block_height_stuck_count'] += 1
-    else:
-        # Check if we have to send a notification that the Height increases again
-        if 'block_height_stuck_count' in user_data and user_data['block_height_stuck_count'] > 0:
-            text = 'Block height is increasing again! 👌' + '\n' + \
-                   'IP: ' + NODE_IP + '\n' + \
-                   'Block height now at: ' + block_height + '\n'
-            context.bot.send_message(chat_id, text)
-            user_data['block_height_stuck_count'] = -1
-        else:
-            user_data['block_height_stuck_count'] = 0
+    if 'governance_proposals_count' not in user_data:
+        user_data['governance_proposals_count'] = governance_proposals_count
 
-    # Set current block height
-    user_data['block_height'] = block_height
+    new_proposals_count = governance_proposals_count - user_data['governance_proposals_count']
+    for i in range(new_proposals_count):
+        current_proposal = governance_proposals[user_data['governance_proposals_count'] + i]
 
-    # If it just got stuck send a message
-    if user_data['block_height_stuck_count'] == 1:
-        text = 'Block height is not increasing anymore! 💀' + '\n' + \
-               'IP: ' + NODE_IP + '\n' + \
-               'Block height stuck at: ' + block_height + '\n\n' + \
-               'Please check your Terra Node immediately!'
-        context.bot.send_message(chat_id, text)
+        voting_start_time = datetime.strptime(current_proposal['voting_start_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
+        voting_end_time = datetime.strptime(current_proposal['voting_end_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
 
-    # Show buttons if there were changes or block height just got (un)stuck
-    # Stuck count:
-    # 0 == everthings alright
-    # 1 == just got stuck
-    # -1 == just got unstuck
-    # > 1 == still stuck
+        text = 'A new governance proposal got submitted! 📣\n\n' + \
+               '*Title:*\n' + current_proposal['content']['value']['title'] + '\n' + \
+               '*Type:*\n' + current_proposal['content']['type'] + '\n' + \
+               '*Description:*\n' + current_proposal['content']['value']['description'] + '\n\n' + \
+               '*Voting Start Time:* ' + voting_start_time.strftime("%A %B %d, %H:%M") + ' UTC\n' + \
+               '*Voting End Time:* ' + voting_end_time.strftime("%A %B %d, %H:%M") + ' UTC\n\n' + \
+               'Make sure to vote on this governance proposal until *' + voting_end_time.strftime("%A %B %d, %H:%M") + ' UTC*!'
 
-    if user_data['block_height_stuck_count'] == 1 or user_data['block_height_stuck_count'] == -1:
+        context.bot.send_message(chat_id, text, parse_mode='markdown')
+
+    user_data['governance_proposals_count'] = governance_proposals_count
+
+    if new_proposals_count:
         show_home_menu_new_msg(context=context, chat_id=chat_id)
 
 
