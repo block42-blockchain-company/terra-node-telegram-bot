@@ -3,6 +3,7 @@ import itertools
 import json
 import os
 import random
+import re
 import unittest
 import time
 from subprocess import Popen
@@ -44,7 +45,6 @@ class TerraNodeBot(unittest.TestCase):
             cls.telegram.send_message(cls.BOT_ID, "/start")
             time.sleep(3)
 
-
     @classmethod
     def tearDownClass(cls):
         cls.terra_node_bot_process.terminate()
@@ -57,18 +57,39 @@ class TerraNodeBot(unittest.TestCase):
             response = next(self.telegram.iter_history(self.BOT_ID))
             len_buttons = len(response.reply_markup.inline_keyboard)
             self.assertEqual(response.reply_markup.inline_keyboard[len_buttons - 1][0].text,
-                             "Add Node", "Add Node not visible after /start")
+                             "📡 MY NODES", "📡 MY NODES not visible after /start")
+
+    def test_my_nodes_menu(self):
+        with self.telegram:
+            self.telegram.send_message(self.BOT_ID, "/start")
+            time.sleep(3)
+
+            self.click_button("📡 MY NODES")
+
+            time.sleep(3)
+            response = next(self.telegram.iter_history(self.BOT_ID))
+            len_buttons = len(response.reply_markup.inline_keyboard)
+            self.assertEqual(response.reply_markup.inline_keyboard[len_buttons - 1][0].text,
+                             "➕ ADD NODE", "➕ ADD NODE not visible after /start")
+
+    def test_back_button_node_my_nodes_menu(self):
+        with self.telegram:
+            self.telegram.send_message(self.BOT_ID, "/start")
+            time.sleep(3)
+            response = next(self.telegram.iter_history(self.BOT_ID))
+
+            self.click_button("📡 MY NODES")
+            self.assert_back_button(response.text)
 
     def test_assert_add_node_cancel(self):
         self.assert_add_node(address="/cancel",
                       expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
-                      expected_response2="I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:")
+                      expected_response2="add a node")
 
     def test_assert_add_node_invalid_address(self):
         self.assert_add_node(address="terravaloper_invalid_address",
                       expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
-                      expected_response2="⛔️ I have not found a Node with this address! ⛔\nPlease try another one. "
-                                         "(enter /cancel to return to the menu)")
+                      expected_response2="⛔️ I have not found a Node with this address!")
 
     def test_assert_add_node_valid_address(self):
         self.add_valid_address()
@@ -77,7 +98,7 @@ class TerraNodeBot(unittest.TestCase):
         valid_address = self.add_valid_address()
 
         with self.telegram:
-            self.click_button(valid_address)
+            self.click_button("📡 " + valid_address)
 
             response = next(self.telegram.iter_history(self.BOT_ID))
             self.assertNotEqual(response.text.find("Node: " + valid_address), -1, "Click on Address does not show Node detail menu")
@@ -87,7 +108,7 @@ class TerraNodeBot(unittest.TestCase):
 
         with self.telegram:
             response = next(self.telegram.iter_history(self.BOT_ID))
-            self.click_button(valid_address)
+            self.click_button("📡 " + valid_address)
             self.assert_back_button(response.text)
 
     def test_delete_node_confirm_true(self):
@@ -140,10 +161,8 @@ class TerraNodeBot(unittest.TestCase):
 
         self.assertNotEqual(first_response.text.find(new_proposal['content']['value']['title']), -1, \
                             "Expected '" + json.dumps(new_proposal) + "' but got '" + first_response.text + "'")
-        self.assertEqual(second_response.text,
-                         "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
-                         "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - "
-                         "not visible after node address change notification.")
+        self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
+                        "'I am your Terra Node Bot. 🤖' - not visible after node address change notification.")
 
     """
     --------------------------------------------------------------------------------------------------------
@@ -155,8 +174,9 @@ class TerraNodeBot(unittest.TestCase):
         with self.telegram:
             self.telegram.send_message(self.BOT_ID, "/start")
             time.sleep(3)
+            self.click_button("📡 MY NODES")
 
-            self.click_button("Add Node")
+            self.click_button("➕ ADD NODE")
 
             first_response = next(self.telegram.iter_history(self.BOT_ID))
             self.telegram.send_message(self.BOT_ID, address)
@@ -165,15 +185,16 @@ class TerraNodeBot(unittest.TestCase):
             second_response_2 = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
 
             self.assertEqual(first_response.text, expected_response1, "Expected '" + expected_response1 + "' but got '" + first_response.text + "'")
-            self.assertTrue(second_response_1.text == expected_response2 or second_response_2.text == expected_response2, \
-                "Expected '" + expected_response2 + "' but got '" + second_response_1.text + "' and '" + second_response_2.text + "'")
+            self.assertTrue(re.search(expected_response2, second_response_1.text, re.IGNORECASE) or
+                            re.search(expected_response2, second_response_2.text, re.IGNORECASE),
+                            "Expected '" + expected_response2 + "' but got '" + second_response_1.text + "' and '" + second_response_2.text + "'")
 
     def assert_back_button(self, text):
         """
         Click back button and assert TG shows what was shown before
         """
 
-        self.click_button("<< Back")
+        self.click_button("⬅️ BACK")
 
         response = next(self.telegram.iter_history(self.BOT_ID))
 
@@ -189,14 +210,15 @@ class TerraNodeBot(unittest.TestCase):
             self. telegram.send_message(self.BOT_ID, "/start")
             time.sleep(3)
 
-            self.click_button(valid_address)
+            self.click_button("📡 MY NODES")
+            self.click_button("📡 " + valid_address)
 
-            self.click_button("Delete Node")
+            self.click_button("➖ DELETE NODE")
 
             first_response = next(self.telegram.iter_history(self.BOT_ID))
 
             self.assertEqual(first_response.text, '⚠️ Do you really want to remove the address from your monitoring '
-                                                  'list? ⚠️\n' + valid_address, "Delete Node button doesn't work!")
+                                                  'list? ⚠️\n' + valid_address, "➖ DELETE NODE button doesn't work!")
 
             if confirm:
                 self.click_button("YES ✅")
@@ -205,8 +227,8 @@ class TerraNodeBot(unittest.TestCase):
                 second_response_2 = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
                 self.assertEqual(second_response_1.text, "❌ Node address got deleted! ❌\n" + valid_address, \
                     "YES button on deletion confirmation does not yield deletion statement")
-                self.assertEqual(second_response_2.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list "
-                            "below or add one:", "YES button on deletion confirmation does not go back to nodes menu")
+                self.assertTrue(re.search("add a node", second_response_2.text, re.IGNORECASE),
+                                "YES button on deletion confirmation does not go back to nodes menu")
             else:
                 self.click_button("NO ❌")
                 time.sleep(3)
@@ -266,9 +288,8 @@ class TerraNodeBot(unittest.TestCase):
 
         self.assertNotEqual(first_response.text.find(expected_response), -1, \
                             "Expected '" + expected_response + "' but got '" + first_response.text + "'")
-        self.assertEqual(second_response.text,
-                         "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
-                         "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - not visible after node address change notification.")
+        self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
+                        "'I am your Terra Node Bot. 🤖' - not visible after node address change notification.")
 
     def assert_height_related_notification(self, monitoring_type):
         file_name = ""
@@ -310,9 +331,8 @@ class TerraNodeBot(unittest.TestCase):
 
         self.assertNotEqual(first_response.text.find(expected_response1), -1, "Expected '" + expected_response1 + \
                                                                   "'\nbut got\n'" + first_response.text + "'")
-        self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list "
-                                 "below or add one:", "I am your Terra Node Bot. 🤖\nChoose an address from the "
-                                 "list below or add one: - not visible after block height notification")
+        self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
+                        "'I am your Terra Node Bot. 🤖' - not visible after block height notification.")
 
         time.sleep(35)
         with self.telegram:
@@ -321,8 +341,8 @@ class TerraNodeBot(unittest.TestCase):
 
         self.assertNotEqual(first_response.text.find(expected_response2), -1, "Expected '" + expected_response2 + \
                                                                   "'\nbut got\n'" + first_response.text + "'")
-        self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
-            "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one: - not visible after block height notification")
+        self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
+                        "'I am your Terra Node Bot. 🤖' - not visible after block height notification.")
 
     def assert_catch_up_notification(self, catching_up):
         self.set_catch_up_status(catching_up=catching_up)
@@ -338,9 +358,8 @@ class TerraNodeBot(unittest.TestCase):
 
         self.assertNotEqual(first_response.text.find(expected_response), -1, "Expected '" + expected_response + \
                                                                   "'\nbut got\n'" + first_response.text + "'")
-        self.assertEqual(second_response.text, "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:", \
-            "I am your Terra Node Bot. 🤖\nChoose an address from the list below or add one:" \
-            " - not visible after catching_up=" + str(catching_up) + " notification")
+        self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
+                        "'I am your Terra Node Bot. 🤖' - not visible after catching_up=" + str(catching_up) + " notification")
 
     """
     --------------------------------------------------------------------------------------------------------
