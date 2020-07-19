@@ -207,7 +207,12 @@ def handle_add_node(update, context):
     """
 
     address = update.message.text
-    node = get_validator(address)
+    try:
+        node = get_validator(address=address)
+    except ConnectionError:
+        context.user_data['expected'] = None
+        update.message.reply_text('⛔️ I cannot reach the LCD server!⛔\nPlease try again later.')
+        return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
     if node is None:
         context.user_data['expected'] = 'add_node'
