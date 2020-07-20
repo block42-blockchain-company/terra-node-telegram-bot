@@ -65,7 +65,7 @@ def check_node_reachable(context):
     if 'is_node_reachable' not in user_data:
         user_data['is_node_reachable'] = True
 
-    response = requests.get(get_node_status_endpoint())
+    response = requests.get(NODE_STATUS_ENDPOINT)
     if response.status_code == 200:
         is_node_currently_reachable = True
     else:

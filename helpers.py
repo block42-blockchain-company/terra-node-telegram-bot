@@ -120,19 +120,19 @@ def get_validator(address):
 
     if DEBUG:
         # Get local validator file
-        response = requests.get(get_validators_endpoint())
+        response = requests.get(VALIDATORS_ENDPOINT)
         if response.status_code != 200:
-            logger.info("ConnectionError while requesting " + get_validators_endpoint())
+            logger.info("ConnectionError while requesting " + VALIDATORS_ENDPOINT)
             raise ConnectionError
         nodes = response.json()
         # Get the right node
         node = next(filter(lambda node: node['operator_address'] == address, nodes['result']), None)
         return node
     else:
-        response = requests.get(get_validators_endpoint() + "/" + address)
+        response = requests.get(VALIDATORS_ENDPOINT + "/" + address)
         if response.status_code != 200:
             if not is_lcd_reachable:
-                logger.info("ConnectionError while requesting " + get_node_info_endpoint())
+                logger.info("ConnectionError while requesting " + NODE_INFO_ENDPOINT)
                 raise ConnectionError
             else:
                 return None
@@ -142,10 +142,9 @@ def get_validator(address):
 
 
 def is_node_catching_up():
-    url = get_node_status_endpoint()
-    response = requests.get(url=url)
+    response = requests.get(url=NODE_STATUS_ENDPOINT)
     if response.status_code != 200:
-        logger.info("ConnectionError while requesting " + url)
+        logger.info("ConnectionError while requesting " + NODE_STATUS_ENDPOINT)
         raise ConnectionError
 
     status = response.json()
@@ -157,7 +156,7 @@ def is_lcd_reachable():
     Check whether the public Lite Client Daemon (LCD) is reachable
     """
 
-    response = requests.get(get_node_info_endpoint())
+    response = requests.get(NODE_INFO_ENDPOINT)
     return True if response.status_code == 200 else False
 
 
@@ -166,10 +165,9 @@ def get_node_block_height():
     Return block height of your Terra Node
     """
 
-    url = get_node_status_endpoint()
-    response = requests.get(url=url)
+    response = requests.get(url=NODE_STATUS_ENDPOINT)
     if response.status_code != 200:
-        logger.info("ConnectionError while requesting " + url)
+        logger.info("ConnectionError while requesting " + NODE_STATUS_ENDPOINT)
         raise ConnectionError
 
     status = response.json()
@@ -218,43 +216,10 @@ def get_governance_proposals():
     Return all governance proposals
     """
 
-    response = requests.get(url=get_governance_proposal_endpoint())
+    response = requests.get(url=GOVERNANCE_PROPOSAL_ENDPOINT)
     if response.status_code != 200:
-        logger.info("ConnectionError while requesting " + get_governance_proposal_endpoint())
+        logger.info("ConnectionError while requesting " + GOVERNANCE_PROPOSAL_ENDPOINT)
         raise ConnectionError
 
     governance_proposals = response.json()
     return governance_proposals['result']
-
-
-def get_validators_endpoint():
-    """
-    Return the endpoint for the validator nodes
-    """
-
-    return 'http://localhost:8000/validators.json' if DEBUG else 'https://lcd.terra.dev/staking/validators'
-
-
-def get_node_status_endpoint():
-    """
-    Return the endpoint for block height checks
-    """
-
-    return 'http://localhost:8000/status.json' if DEBUG else 'http://' + NODE_IP + ':26657/status'
-
-
-def get_governance_proposal_endpoint():
-    """
-    Return the endpoint of governance proposals
-    """
-
-    return 'http://localhost:8000/governance_proposals.json' if DEBUG else 'https://lcd.terra.dev/gov/proposals'
-
-
-def get_node_info_endpoint():
-    """
-    Return the endpoint of the node info
-    """
-
-    return 'https://lcd.terra.dev/node_info'
-

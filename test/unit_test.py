@@ -164,6 +164,16 @@ class TerraNodeBot(unittest.TestCase):
         self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
                         "'I am your Terra Node Bot. 🤖' - not visible after node address change notification.")
 
+    def test_lcd_unreachable_notification(self):
+        self.assert_unreachable_notification(file_name="node_info",
+                                             expected1="The public Lite Client Daemon (LCD) cannot be reached!",
+                                             expected2="The public Lite Client Daemon (LCD) is reachable again!")
+
+    def test_node_unreachable_notification(self):
+        self.assert_unreachable_notification(file_name="status",
+                                             expected1="The specified Node cannot be reached!",
+                                             expected2="The specified Node is reachable again!")
+
     """
     --------------------------------------------------------------------------------------------------------
     GENERIC METHODS
@@ -360,6 +370,31 @@ class TerraNodeBot(unittest.TestCase):
                                                                   "'\nbut got\n'" + first_response.text + "'")
         self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
                         "'I am your Terra Node Bot. 🤖' - not visible after catching_up=" + str(catching_up) + " notification")
+
+    def assert_unreachable_notification(self, file_name, expected1, expected2):
+        os.rename(file_name + ".json", file_name + "_renamed.json")
+        time.sleep(20)
+
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+
+        self.assertNotEqual(first_response.text.find(expected1), -1,
+                            "Expected '" + expected1 + "' but got '" + first_response.text + "'")
+        self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
+                        "'I am your Terra Node Bot. 🤖' - not visible after node address change notification.")
+
+        os.rename(file_name + "_renamed.json", file_name + ".json")
+        time.sleep(20)
+
+        with self.telegram:
+            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+
+        self.assertNotEqual(first_response.text.find(expected2), -1,
+                            "Expected '" + expected2 + "' but got '" + first_response.text + "'")
+        self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
+                        "'I am your Terra Node Bot. 🤖' - not visible after node address change notification.")
 
     """
     --------------------------------------------------------------------------------------------------------
