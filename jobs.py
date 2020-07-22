@@ -19,10 +19,9 @@ def node_checks(context):
         check_node_status(context)
         check_price_feeder(context)
         check_governance_proposals(context)
-    if NODE_IP:
-        if check_node_reachable(context):
-            check_node_catch_up_status(context)
-            check_node_block_height(context)
+    if NODE_IP and check_node_reachable(context):
+        check_node_catch_up_status(context)
+        check_node_block_height(context)
 
 
 def check_lcd_reachable(context):
