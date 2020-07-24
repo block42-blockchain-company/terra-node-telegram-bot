@@ -15,12 +15,77 @@ def node_checks(context):
     Periodic checks of various node stats
     """
 
-    check_node_status(context)
-    check_price_feeder(context)
-    check_governance_proposals(context)
-    if NODE_IP:
+    if check_lcd_reachable(context):
+        check_node_status(context)
+        check_price_feeder(context)
+        check_governance_proposals(context)
+    if NODE_IP and check_node_reachable(context):
         check_node_catch_up_status(context)
         check_node_block_height(context)
+
+
+def check_lcd_reachable(context):
+    """
+    Returns whether the public Lite Client Daemon (LCD) is reachable and informs user
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    if 'is_lcd_reachable' not in user_data:
+        user_data['is_lcd_reachable'] = True
+
+    is_lcd_currently_reachable = is_lcd_reachable()
+
+    if user_data['is_lcd_reachable'] == True and not is_lcd_currently_reachable:
+        user_data['is_lcd_reachable'] = False
+        text = 'The public Lite Client Daemon (LCD) cannot be reached! 💀' + '\n' + \
+               'Node monitoring will be restricted to node specific attributes until it is reachable again.'
+        try_message(context=context, chat_id=chat_id, text=text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+    elif user_data['is_lcd_reachable'] == False and is_lcd_currently_reachable:
+        user_data['is_lcd_reachable'] = True
+        text = 'The public Lite Client Daemon (LCD) is reachable again! 👌' + '\n' + \
+               'Monitoring of publicly available node attributes resumes.'
+        try_message(context=context, chat_id=chat_id, text=text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+
+    return is_lcd_currently_reachable
+
+
+def check_node_reachable(context):
+    """
+    Returns whether the specified node IP is reachable and informs user
+    """
+
+    chat_id = context.job.context['chat_id']
+    user_data = context.job.context['user_data']
+
+    if 'is_node_reachable' not in user_data:
+        user_data['is_node_reachable'] = True
+
+    response = requests.get(NODE_STATUS_ENDPOINT)
+    if response.status_code == 200:
+        is_node_currently_reachable = True
+    else:
+        is_node_currently_reachable = False
+
+    if user_data['is_node_reachable'] == True and not is_node_currently_reachable:
+        user_data['is_node_reachable'] = False
+        text = 'The specified Node cannot be reached! 💀' + '\n' + \
+               'IP: ' + NODE_IP + '\n' + \
+               'Node monitoring will be restricted to publicly available node attributes until it is reachable again.' + '\n\n' + \
+               'Please check your Terra Node immediately!'
+        try_message(context=context, chat_id=chat_id, text=text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+    elif user_data['is_node_reachable'] == False and is_node_currently_reachable:
+        user_data['is_node_reachable'] = True
+        text = 'The specified Node is reachable again! 👌' + '\n' + \
+               'Monitoring of node specific attributes resumes.'
+        try_message(context=context, chat_id=chat_id, text=text)
+        show_home_menu_new_msg(context=context, chat_id=chat_id)
+
+    return is_node_currently_reachable
 
 
 def check_node_status(context):
@@ -39,7 +104,11 @@ def check_node_status(context):
 
     # Iterate through all keys
     for address in user_data['nodes'].keys():
-        remote_node = get_validator(address=address)
+        try:
+            remote_node = get_validator(address=address)
+        except ConnectionError:
+            continue
+
         local_node = user_data['nodes'][address]
 
         if remote_node is None:
@@ -100,7 +169,11 @@ def check_price_feeder(context):
         if 'is_price_feed_healthy' not in user_data:
             user_data['is_price_feed_healthy'] = True
 
-        is_price_feed_currently_healthy = is_price_feed_healthy(address)
+        try:
+            is_price_feed_currently_healthy = is_price_feed_healthy(address)
+        except ConnectionError:
+            continue
+
         if user_data['is_price_feed_healthy'] == True and not is_price_feed_currently_healthy:
             user_data['is_price_feed_healthy'] = False
             text = 'Price feed is not healthy anymore! 💀' + '\n' + \
@@ -126,12 +199,17 @@ def check_node_catch_up_status(context):
     if 'is_catching_up' not in user_data:
         user_data['is_catching_up'] = False
 
-    is_currently_catching_up = is_node_catching_up()
+    try:
+        is_currently_catching_up = is_node_catching_up()
+        block_height = get_node_block_height()
+    except ConnectionError:
+        return
+
     if user_data['is_catching_up'] == False and is_currently_catching_up:
         user_data['is_catching_up'] = True
         text = 'The Node is behind the latest block height and catching up! 💀 ' + '\n' + \
                'IP: ' + NODE_IP + '\n' + \
-               'Current block height: ' + get_node_block_height() + '\n\n' + \
+               'Current block height: ' + block_height + '\n\n' + \
                'Please check your Terra Node immediately!'
         try_message(context=context, chat_id=chat_id, text=text)
         show_home_menu_new_msg(context=context, chat_id=chat_id)
@@ -139,7 +217,7 @@ def check_node_catch_up_status(context):
         user_data['is_catching_up'] = False
         text = 'The node caught up to the latest block height again! 👌' + '\n' + \
                'IP: ' + NODE_IP + '\n' + \
-               'Current block height: ' + get_node_block_height()
+               'Current block height: ' + block_height
         try_message(context=context, chat_id=chat_id, text=text)
         show_home_menu_new_msg(context=context, chat_id=chat_id)
 
@@ -152,7 +230,10 @@ def check_node_block_height(context):
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
 
-    block_height = get_node_block_height()
+    try:
+        block_height = get_node_block_height()
+    except ConnectionError:
+        return
 
     # Check if block height got stuck
     if 'block_height' in user_data and block_height <= user_data['block_height']:
@@ -207,7 +288,11 @@ def check_new_goverance_proposal(context):
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
 
-    governance_proposals = get_governance_proposals()
+    try:
+        governance_proposals = get_governance_proposals()
+    except ConnectionError:
+        return
+
     governance_proposals_count = len(governance_proposals)
 
     if 'governance_proposals_count' not in user_data:
