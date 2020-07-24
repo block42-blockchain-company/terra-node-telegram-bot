@@ -41,15 +41,36 @@ def setup_existing_user(dispatcher):
     """
 
     chat_ids = dispatcher.user_data.keys()
+    delete_chat_ids = []
     for chat_id in chat_ids:
-        dispatcher.job_queue.run_repeating(node_checks, interval=15, context={
-            'chat_id': chat_id, 'user_data': dispatcher.user_data[chat_id]
-        })
         restart_message = 'Hello there!\n' \
                           'Me, your Node Bot of Terra, just got restarted on the server! 🤖\n' \
                           'To make sure you have the latest features, please start ' \
                           'a fresh chat with me by typing /start.'
-        dispatcher.bot.send_message(chat_id, restart_message)
+        try:
+            dispatcher.bot.send_message(chat_id, restart_message)
+            dispatcher.job_queue.run_repeating(node_checks, interval=15, context={
+                'chat_id': chat_id, 'user_data': dispatcher.user_data[chat_id]
+            })
+        except TelegramError as e:
+            if 'bot was blocked by the user' in e.message:
+                delete_chat_ids.append(chat_id)
+                continue
+            else:
+                print("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
+
+    for chat_id in delete_chat_ids:
+        print("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
+        del dispatcher.user_data[chat_id]
+        del dispatcher.chat_data[chat_id]
+        del dispatcher.persistence.user_data[chat_id]
+        del dispatcher.persistence.chat_data[chat_id]
+
+        # Somehow session.data does not get updated if all users block the bot.
+        # That's why we delete the file ourselves.
+        if len(dispatcher.persistence.user_data) == 0:
+            if os.path.exists("./storage/session.data"):
+                os.remove("./storage/session.data")
 
 
 """
