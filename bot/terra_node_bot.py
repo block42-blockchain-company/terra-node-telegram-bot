@@ -1,14 +1,13 @@
 import atexit
 import re
 import subprocess
+from helpers import *
+from constants import *
+from jobs import *
 
 from telegram.error import BadRequest
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, \
     run_async
-
-from constants import *
-from helpers import *
-from jobs import *
 
 """
 ######################################################################################################################################################
@@ -18,8 +17,17 @@ Debug Processes
 
 if DEBUG:
     mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd="test/")
-    increase_block_height_process = subprocess.Popen(['python3', 'increase_block_height.py'], cwd="test/")
-    update_local_price_feed = subprocess.Popen(['python3', 'update_price_feed.py'], cwd="test/")
+    #increase_block_height_process = subprocess.Popen(['python3', 'increase_block_height.py'], cwd="test/")
+    #update_local_price_feed = subprocess.Popen(['python3', 'update_price_feed.py'], cwd="test/")
+
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    test_dir = os.sep.join([current_dir, os.path.pardir, "test"])
+    increase_block_height_path = os.sep.join([test_dir, "increase_block_height.py"])
+    update_local_price_feed_path = os.sep.join([test_dir, "update_price_feed.py"])
+
+    increase_block_height_process = subprocess.Popen(['python3', increase_block_height_path], cwd=test_dir)
+    update_local_price_feed = subprocess.Popen(['python3', update_local_price_feed_path], cwd="test/")
+
 
     def cleanup():
         mock_api_process.terminate()
@@ -49,7 +57,7 @@ def setup_existing_user(dispatcher):
                           'a fresh chat with me by typing /start.'
         try:
             dispatcher.bot.send_message(chat_id, restart_message)
-            dispatcher.job_queue.run_repeating(node_checks, interval=15, context={
+            dispatcher.job_queue.run_repeating(node_checks, interval=JOB_INTERVAL_IN_SECONDS, context={
                 'chat_id': chat_id, 'user_data': dispatcher.user_data[chat_id]
             })
         except TelegramError as e:
@@ -69,8 +77,8 @@ def setup_existing_user(dispatcher):
         # Somehow session.data does not get updated if all users block the bot.
         # That's why we delete the file ourselves.
         if len(dispatcher.persistence.user_data) == 0:
-            if os.path.exists("./storage/session.data"):
-                os.remove("./storage/session.data")
+            if os.path.exists(session_data_path):
+                os.remove(session_data_path)
 
 
 """
@@ -90,7 +98,7 @@ def start(update, context):
 
     # Start job for user
     if 'job_started' not in context.user_data:
-        context.job_queue.run_repeating(node_checks, interval=15, context={
+        context.job_queue.run_repeating(node_checks, interval=JOB_INTERVAL_IN_SECONDS, context={
             'chat_id': update.message.chat.id,
             'user_data': context.user_data
         })
@@ -308,7 +316,7 @@ def main():
     """
 
     # Init telegram bot
-    bot = Updater(TELEGRAM_BOT_TOKEN, persistence=PicklePersistence(filename='storage/session.data'), use_context=True)
+    bot = Updater(TELEGRAM_BOT_TOKEN, persistence=PicklePersistence(filename=session_data_path), use_context=True)
     dispatcher = bot.dispatcher
 
     setup_existing_user(dispatcher=dispatcher)
@@ -323,7 +331,7 @@ def main():
 
     # Start the bot
     bot.start_polling()
-    logger.info('node Bot is running ...')
+    logger.info('Terra Node Bot is running ...')
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
