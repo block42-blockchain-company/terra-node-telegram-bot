@@ -1,3 +1,5 @@
+import json
+
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError
 
@@ -91,7 +93,7 @@ def send_message_to_all_platforms(context, chat_id, text, reply_markup=None):
 
 def send_slack_message(text):
     if SLACK_WEBHOOK:
-        requests.post(SLACK_WEBHOOK, data = {'text':text})
+        requests.post(SLACK_WEBHOOK, data=json.dumps({'text': text}), headers={'Content-Type': 'application/json'})
 
 
 def try_message(context, chat_id, text, reply_markup=None):

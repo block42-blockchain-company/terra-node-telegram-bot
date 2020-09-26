@@ -17,8 +17,6 @@ Debug Processes
 
 if DEBUG:
     mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd="test/")
-    #increase_block_height_process = subprocess.Popen(['python3', 'increase_block_height.py'], cwd="test/")
-    #update_local_price_feed = subprocess.Popen(['python3', 'update_price_feed.py'], cwd="test/")
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
     test_dir = os.sep.join([current_dir, os.path.pardir, "test"])

@@ -38,7 +38,7 @@ class TerraNodeBot(unittest.TestCase):
         )
 
         # Start the Telegram Terra Node Bot
-        cls.terra_node_bot_process = Popen(['python3', 'terra_node_bot.py'], cwd="../")
+        cls.terra_node_bot_process = Popen(['python3', 'bot/terra_node_bot.py'], cwd="../")
         time.sleep(5)
 
         with cls.telegram:
