@@ -1,0 +1,7 @@
+test
+venv
+README.md
+LICENSE
+.git
+.gitignore
+*cache

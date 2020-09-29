@@ -2,7 +2,7 @@ import json
 
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError
-
+from requests.exceptions import RequestException
 from constants import *
 
 """
@@ -93,7 +93,10 @@ def send_message_to_all_platforms(context, chat_id, text, reply_markup=None):
 
 def send_slack_message(text):
     if SLACK_WEBHOOK:
-        requests.post(SLACK_WEBHOOK, data=json.dumps({'text': text}), headers={'Content-Type': 'application/json'})
+        try:
+            requests.post(SLACK_WEBHOOK, data=json.dumps({'text': text}), headers={'Content-Type': 'application/json'})
+        except RequestException as e:
+            logger.error(f"Slack Webhook post request failed with:\n{e}")
 
 
 def try_message(context, chat_id, text, reply_markup=None):

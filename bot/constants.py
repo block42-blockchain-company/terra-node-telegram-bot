@@ -7,17 +7,17 @@ Static & environment variables
 ######################################################################################################################################################
 """
 
-DEBUG = bool(os.environ['DEBUG'] == 'True') if 'DEBUG' in os.environ else False
+DEBUG = bool(os.environ.get('DEBUG') == "True")
 TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
-SLACK_WEBHOOK = os.environ['SLACK_WEBHOOK'] if 'SLACK_WEBHOOK' in os.environ and os.environ['SLACK_WEBHOOK'] else None
+SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
+
 
 # Set NODE_IP depending on mode (if None, certain node health jobs are not executed)
 if DEBUG:
     NODE_IP = 'localhost'
-elif 'NODE_IP' in os.environ and os.environ['NODE_IP']:
-    NODE_IP = os.environ['NODE_IP']
 else:
-    NODE_IP = None
+    NODE_IP = os.environ.get('NODE_IP') if os.environ.get('NODE_IP') else None
+
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
