@@ -1,5 +1,4 @@
 import os
-from subprocess import Popen
 
 from pyrogram import Client as TelegramClient
 

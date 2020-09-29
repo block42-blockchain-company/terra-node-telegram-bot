@@ -1,6 +1,8 @@
+import json
+
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError
-
+from requests.exceptions import RequestException
 from constants import *
 
 """
@@ -82,6 +84,19 @@ def show_detail_menu(update, context):
 
     # Modify message
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def send_message_to_all_platforms(context, chat_id, text, reply_markup=None):
+    try_message(context=context, chat_id=chat_id, text=text, reply_markup=reply_markup)
+    send_slack_message(text)
+
+
+def send_slack_message(text):
+    if SLACK_WEBHOOK:
+        try:
+            requests.post(SLACK_WEBHOOK, data=json.dumps({'text': text}), headers={'Content-Type': 'application/json'})
+        except RequestException as e:
+            logger.error(f"Slack Webhook post request failed with:\n{e}")
 
 
 def try_message(context, chat_id, text, reply_markup=None):

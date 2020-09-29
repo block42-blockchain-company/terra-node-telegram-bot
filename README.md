@@ -1,6 +1,6 @@
 # terra-node-telegram-bot 🌐🤖
 
-A telegram bot to monitor the status of Terra Nodes.
+A Telegram Bot to monitor the status of Terra Nodes.
 
 Features:
 * Monitor **remote nodes**
@@ -9,6 +9,7 @@ Features:
 * Notifications if your **Block Height** gets stuck
 * Notifications if **Price Feed** gets unhealthy
 * Notifications about new **Governance Proposals**
+* Notifications on **Slack**
 
 If you have questions please open a [github](https://github.com/block42-blockchain-company/terra-node-telegram-bot/issues) 
 issue or contact us in our [Telegram Channel](https://t.me/block42_crypto!)!
@@ -23,16 +24,19 @@ Install docker and run:
 
 ```
 docker volume create terra-node-bot-volume
-docker run -d --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
+docker run -d --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --env SLACK_WEBHOOK=XXX --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
 ```
 Set 
 - `TELEGRAM_BOT_TOKEN` to your Telegram Bot Token obtained from BotFather.
 - `NODE_IP` to any IP you want to monitor (or `localhost`). 
 Leave it empty or remove it to only monitor public Node information.
+- `SLACK_WEBHOOK` to the webhook of your Slack channel to receive notifications on [Slack](https://slack.com). 
+Leave it empty or remove it to not get notified via Slack.
 
 ## [Steps to run everything yourself](#steps-to-run-everything-yourself)
 * [Install dependencies](#install-dependencies)
-* [Create Telegram bot token](#create-telegram-bot-token-via-botfather) via [BotFather]((https://t.me/BotFather))
+* [Create Telegram Bot token](#create-telegram-bot-token-via-botfather) via [BotFather]((https://t.me/BotFather))
+* [Set up Slack Webhook](#set-up-slack-webhook)
 * [Set environment variables](#set-environment-variables)
 * [Start the bot](#start-the-bot)
 * [Run and test the bot](#run-and-test-the-bot)
@@ -47,16 +51,31 @@ Leave it empty or remove it to only monitor public Node information.
 ## [Install dependencies](#install-dependencies)
 Install all required dependencies via: `pip install -r requirements.txt`
 
-## [Create Telegram bot token via BotFather](#create-telegram-bot-token-via-botfather)
+## [Create Telegram Bot token via BotFather](#create-telegram-bot-token-via-botfather)
 Start a Telegram chat with [BotFather](https://t.me/BotFather) and click `start`.
 
 Then send `/newbot` in the chat, and follow the given steps to create a new telegram token. Save this token, you will need it in a second.
 
-## [Set environment variables](#set-environment-variables)
-Set the telegram bot token you just created as an environment variable: `TELEGRAM_BOT_TOKEN`
+## [Set up Slack Webhook](#set-up-slack-webhook)
+If you want to receive the bot's notifications also in one of your slack channels, you need to set up a Webhook for
+your channel.
 
+To do this, follow steps 1, 2, and 3 of the official [Slack guide](https://api.slack.com/messaging/webhooks).
+At the end of step 3, you should be able to get your Webhook URL similar to this:
+```
+https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+```
+Save this webhook, you will neet it later.
+
+## [Set environment variables](#set-environment-variables)
+Set the Telegram Bot token you previously created as the environment variable `TELEGRAM_BOT_TOKEN`:
 ```
 export TELEGRAM_BOT_TOKEN=XXX
+```
+---
+Optionally set the Slack Webhook that you previously created as the environment variable `SLACK_WEBHOOK`:
+```
+export SLACK_WEBHOOK=https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
 ---
 Next you can specify the IP of the Terra node that you want to watch in the `NODE_IP` environment variable.
@@ -85,7 +104,7 @@ need to set the debug environment variable:
 export DEBUG=True
 ```
 The DEBUG flag set to True will run a local web server as a separate process. 
-This way the telegram bot can access the local files `validators.json` und `status.json`
+This way the Telegram Bot can access the local files `validators.json` und `status.json`
 in the `test/` folder.
 
 To test whether the bot actually notifies you about changes, the data the bot is querying needs to change. 
@@ -110,7 +129,7 @@ python3 terra_node_bot.py
 Make sure that you see a message in the console which indicates that the bot is running.
 
 ## [Run and test the bot](#run-and-test-the-bot)
-When you created the telegram bot token via BotFather, you gave your bot a certain name (e.g. `terranode_bot`). 
+When you created the Telegram Bot token via BotFather, you gave your bot a certain name (e.g. `terranode_bot`). 
 Now search for this name in Telegram, open the chat and hit start!
 
 At this point, you can play with the bot, see what it does and check that everything works fine!
@@ -145,13 +164,15 @@ docker volume create terra-node-bot-volume
 Finally run the docker container:
 
 ```
-docker run --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
+docker run --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --env SLACK_WEBHOOK=XXX --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
 ```
 
-Set the `--env TELEGRAM_BOT_TOKEN` flag to your telegram bot token. 
+Set the `--env TELEGRAM_BOT_TOKEN` flag to your Telegram Bot token.
 
-Set the `--env NODE_IP` flag to an IP of a running node, or remove 
-`--env NODE_IP=XXX` to listen on localhost.
+Set the `--env SLACK_WEBHOOK` flag to your Slack Webhook. To not use slack notifications, 
+leave this empty i.e. `--env SLACK_WEBHOOK=` or remove it altogether.
+
+Set the `--env NODE_IP` flag to an IP of a running node or `localhost`.
 If you don't know any IP leave this empty i.e. `--env NODE_IP=` or remove it completely.
 
 Finally, the `--mount` flag tells docker to mount our previously created volume in the directory `storage`. 
@@ -186,7 +207,7 @@ This cannot be done during the unit test run, that's why there's the separate sc
 Make sure to set the environment variables `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`.
 Then run in `test/`
 ```
-python3 sing_in_telegram.py
+python3 sign_in_telegram.py
 ```
 and follow the instructions.
 Once finished, the script stores the authentication string in `test/telegram_session.string`
@@ -202,7 +223,7 @@ pip install pytest
 
 ### [Run the tests](#run-the-tests)
 You also need to set the `TELEGRAM_BOT_TOKEN` environment variable with your 
-telegram bot token and set `DEBUG=True` as explained in the [Set environment variables](#set-environment-variables) section.
+Telegram Bot token and set `DEBUG=True` as explained in the [Set environment variables](#set-environment-variables) section.
 
 Keep in mind that the test always deletes the `session.data` file inside `storage/`
 in order to have fresh starts for every integration test. If you wish to keep your
