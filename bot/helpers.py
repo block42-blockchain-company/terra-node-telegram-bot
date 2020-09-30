@@ -56,7 +56,9 @@ def get_my_nodes_menu_buttons(user_data):
     for address in user_data['nodes'].keys():
         keyboard.append([InlineKeyboardButton("📡 " + address, callback_data='node_details-' + address)])
 
-    keyboard.append([InlineKeyboardButton('➕ ADD NODE', callback_data='add_node'),
+    keyboard.append([InlineKeyboardButton('➕ ADD ALL', callback_data='confirm_add_all_nodes'),
+                     InlineKeyboardButton('➕ ADD NODE', callback_data='add_node')])
+    keyboard.append([InlineKeyboardButton('➖ REMOVE ALL', callback_data='confirm_delete_all_nodes'),
                      InlineKeyboardButton('⬅️ BACK', callback_data='home')])
 
     return keyboard
@@ -83,6 +85,16 @@ def show_detail_menu(update, context):
         ]]
 
     # Modify message
+    query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def show_confirmation_menu(update, text, keyboard):
+    """
+    "Are you sure?" - "YES" | "NO"
+    """
+
+    query = update.callback_query
+
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 

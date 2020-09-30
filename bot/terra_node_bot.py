@@ -143,6 +143,14 @@ def dispatch_query(update, context):
         call = show_my_nodes_menu_edit_msg
     elif data == 'add_node':
         call = add_node
+    elif data == 'confirm_add_all_nodes':
+        call = confirm_add_all_nodes
+    elif data == 'add_all_nodes':
+        call = add_all_nodes
+    elif data == 'confirm_delete_all_nodes':
+        call = confirm_delete_all_nodes
+    elif data == 'delete_all_nodes':
+        call = delete_all_nodes
     elif re.match('node_details', data):
         call = node_details
     elif data == 'confirm_node_deletion':
@@ -253,6 +261,74 @@ def handle_add_node(update, context):
 
     context.bot.send_message(update.effective_chat.id, 'Got it! 👌')
     return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+
+
+def confirm_add_all_nodes(update, context):
+    """
+    Ask user if he really wants to add all available nodes
+    """
+
+    keyboard = [[
+        InlineKeyboardButton('YES ✅', callback_data='add_all_nodes'),
+        InlineKeyboardButton('NO ❌', callback_data='my_nodes')
+    ]]
+    text = '⚠️ Do you really want to *add all* available Terra Nodes to your monitoring list? ⚠️'
+
+    return show_confirmation_menu(update=update, text=text, keyboard=keyboard)
+
+
+def confirm_delete_all_nodes(update, context):
+    """
+    Ask user if he really wants to delete all available nodes
+    """
+
+    keyboard = [[
+        InlineKeyboardButton('YES ✅', callback_data='delete_all_nodes'),
+        InlineKeyboardButton('NO ❌', callback_data='my_nodes')
+    ]]
+    text = '⚠️ Do you really want to *remove all* Terra Nodes from your monitoring list? ⚠️'
+
+    return show_confirmation_menu(update=update, text=text, keyboard=keyboard)
+
+
+def add_all_nodes(update, context):
+    """
+    Add all available node addresses to users monitoring list
+    """
+
+    query = update.callback_query
+
+    nodes = get_node_accounts()
+
+    for node in nodes:
+        address = node['node_address']
+        if address not in context.user_data['nodes']:
+            add_node_to_user_data(context.user_data, address, node)
+
+    # Send message
+    query.edit_message_text('Added all Terra Nodes! 👌')
+    show_node_menu_new_msg(update, context)
+
+
+def delete_all_nodes(update, context):
+    """
+    Delete all node addresses from users monitoring list
+    """
+
+    query = update.callback_query
+
+    addresses = []
+    for address in context.user_data['nodes']:
+        addresses.append(address)
+
+    for address in addresses:
+        del context.user_data['nodes'][address]
+
+    text = '❌ Deleted all Terra Nodes! ❌'
+    # Send message
+    query.edit_message_text(text)
+
+    show_node_menu_new_msg(update, context)
 
 
 def node_details(update, context):
