@@ -1,6 +1,9 @@
 import atexit
 import re
 import subprocess
+
+from telegram import ReplyKeyboardMarkup
+
 from helpers import *
 from constants import *
 from jobs import *
@@ -182,10 +185,17 @@ def plain_input(update, context):
     """
     Handle if the users sends a message
     """
+
+    message = update.message.text
     expected = context.user_data['expected'] if 'expected' in context.user_data else None
-    if expected == 'add_node':
+    if message == '📡 My Nodes':
+        return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+    elif message == '🗳 Governance':
+        return governance_menu(update, context)
+    elif expected == 'add_node':
         context.user_data['expected'] = None
         return handle_add_node(update, context)
+
 
 
 @run_async
@@ -205,7 +215,7 @@ def show_home_menu_edit_msg(update, context):
     keyboard = get_home_menu_buttons()
     text = 'I am your Terra Node Bot. 🤖\nClick *MY NODES* to get information about the Terra Nodes you monitor!'
     query = update.callback_query
-    query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='markdown')
+    query.edit_message_text(text, reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True), parse_mode='markdown')
 
 
 def show_my_nodes_menu_edit_msg(update, context):
@@ -366,6 +376,20 @@ def delete_node(update, context):
     query.edit_message_text(text)
     show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
+
+def governance_menu(update, context):
+    """
+    Menu to see results old proposals and vote on ongoing proposals
+    """
+
+    try:
+        governance_proposals = get_governance_proposals()
+    except ConnectionError:
+        return
+
+    for proposal in governance_proposals:
+        text = proposal_to_text(proposal)
+        try_message(context=context, chat_id=update.effective_chat.id, text=text)
 
 """
 ######################################################################################################################################################
