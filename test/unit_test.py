@@ -70,7 +70,7 @@ class TerraNodeBot(unittest.TestCase):
             response = next(self.telegram.iter_history(self.BOT_ID))
             len_buttons = len(response.reply_markup.inline_keyboard)
             self.assertEqual(response.reply_markup.inline_keyboard[len_buttons - 1][0].text,
-                             "➕ ADD NODE", "➕ ADD NODE not visible after /start")
+                             "➖ REMOVE ALL", "➖ REMOVE ALL not visible after /start")
 
     def test_back_button_node_my_nodes_menu(self):
         with self.telegram:
@@ -90,6 +90,19 @@ class TerraNodeBot(unittest.TestCase):
         self.assert_add_node(address="terravaloper_invalid_address",
                       expected_response1="What's the address of your Node? (enter /cancel to return to the menu)",
                       expected_response2="⛔️ I have not found a Node with this address!")
+
+    def test_assert_add_all_nodes_confirm_false(self):
+        self.assert_add_all_nodes(confirm=False)
+
+    def test_assert_add_all_nodes_confirm_true(self):
+        self.assert_add_all_nodes(confirm=True)
+        self.assert_delete_all_nodes(confirm=True)
+
+    def test_assert_delete_all_nodes_confirm_false(self):
+        self.assert_delete_all_nodes(confirm=False)
+
+    def test_assert_delete_all_nodes_confirm_true(self):
+        self.assert_delete_all_nodes(confirm=True)
 
     def test_assert_add_node_valid_address(self):
         self.add_valid_address()
@@ -245,6 +258,77 @@ class TerraNodeBot(unittest.TestCase):
                 second_response = next(self.telegram.iter_history(self.BOT_ID))
                 self.assertNotEqual(second_response.text.find("Node: " + valid_address), -1, \
                     "NO button on single address deletion confirmation does not go back to Node details")
+
+    def assert_add_all_nodes(self, confirm):
+        with self.telegram:
+            self.telegram.send_message(self.BOT_ID, "/start")
+            time.sleep(3)
+            self.click_button("📡 MY NODES")
+
+            self.click_button("➕ ADD ALL")
+
+            first_response = next(self.telegram.iter_history(self.BOT_ID))
+
+            assert first_response.text == '⚠️ Do you really want to add all available Terra Nodes to your monitoring list? ⚠️', \
+                "➕ ADD ALL button does not work!"
+
+            if confirm:
+                self.click_button("YES ✅")
+                second_response_1 = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+                second_response_2 = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+                assert second_response_1.text == "Added all Terra Nodes! 👌", \
+                    "YES button on ➕ ADD ALL confirmation does not yield addition statement"
+                assert second_response_2.text == "Click an address from the list below or add a node:", \
+                    "YES button on ➕ ADD ALL confirmation does not go back to 📡 MY NODES menu"
+                assert second_response_2.reply_markup.inline_keyboard[1][0].text.find('terravaloper') != -1, \
+                    "Nodes are not added after YES button on ➕ ADD ALL confirmation"
+            else:
+                self.click_button("NO ❌")
+                time.sleep(3)
+                second_response = next(self.telegram.iter_history(self.BOT_ID))
+                assert second_response.text == "Click an address from the list below or add a node:", \
+                    "NO button on ➕ ADD ALL confirmation does not go back to 📡 MY NODES menu"
+
+            print("➕ ADD ALL with confirmation=" + str(confirm) + " ✅")
+            print("------------------------")
+
+
+    def assert_delete_all_nodes(self, confirm):
+        with self.telegram:
+            self.telegram.send_message(self.BOT_ID, "/start")
+            time.sleep(3)
+            self.click_button("📡 MY NODES")
+            self.click_button("➕ ADD ALL")
+
+            self.telegram.send_message(self.BOT_ID, "/start")
+            time.sleep(3)
+            self.click_button("📡 MY NODES")
+            self.click_button("➖ REMOVE ALL")
+
+            first_response = next(self.telegram.iter_history(self.BOT_ID))
+
+            assert first_response.text == '⚠️ Do you really want to remove all Terra Nodes from your monitoring list? ⚠️', \
+                "➖ REMOVE ALL button does not work!"
+
+            if confirm:
+                self.click_button("YES ✅")
+                second_response_1 = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
+                second_response_2 = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
+                assert second_response_1.text == "❌ Deleted all Terra Nodes! ❌", \
+                    "YES button on ➖ REMOVE ALL confirmation does not yield deletion statement"
+                assert second_response_2.text == "Click an address from the list below or add a node:", \
+                    "YES button on ➖ REMOVE ALL confirmation does not go back to 📡 MY NODES menu"
+                assert second_response_2.reply_markup.inline_keyboard[0][0].text == '➕ ADD ALL' and \
+                       "Nodes are not deleted after YES button on ➖ REMOVE ALL confirmation"
+            else:
+                self.click_button("NO ❌")
+                time.sleep(3)
+                second_response = next(self.telegram.iter_history(self.BOT_ID))
+                assert second_response.text == "Click an address from the list below or add a node:", \
+                    "NO button on ➖ REMOVE ALL confirmation does not go back to 📡 MY NODES menu"
+
+            print("➖ REMOVE ALL with confirmation=" + str(confirm) + " ✅")
+            print("------------------------")
 
     def assert_node_change_notification(self, field):
         valid_address = json.load(open('validators.json'))['result'][0]['operator_address']

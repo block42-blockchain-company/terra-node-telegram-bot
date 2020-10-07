@@ -16,15 +16,14 @@ Debug Processes
 """
 
 if DEBUG:
-    mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd="test/")
-
     current_dir = os.path.dirname(os.path.realpath(__file__))
     test_dir = os.sep.join([current_dir, os.path.pardir, "test"])
+    mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd=test_dir)
     increase_block_height_path = os.sep.join([test_dir, "increase_block_height.py"])
     update_local_price_feed_path = os.sep.join([test_dir, "update_price_feed.py"])
 
     increase_block_height_process = subprocess.Popen(['python3', increase_block_height_path], cwd=test_dir)
-    update_local_price_feed = subprocess.Popen(['python3', update_local_price_feed_path], cwd="test/")
+    update_local_price_feed = subprocess.Popen(['python3', update_local_price_feed_path], cwd=test_dir)
 
 
     def cleanup():
@@ -143,6 +142,14 @@ def dispatch_query(update, context):
         call = show_my_nodes_menu_edit_msg
     elif data == 'add_node':
         call = add_node
+    elif data == 'confirm_add_all_nodes':
+        call = confirm_add_all_nodes
+    elif data == 'add_all_nodes':
+        call = add_all_nodes
+    elif data == 'confirm_delete_all_nodes':
+        call = confirm_delete_all_nodes
+    elif data == 'delete_all_nodes':
+        call = delete_all_nodes
     elif re.match('node_details', data):
         call = node_details
     elif data == 'confirm_node_deletion':
@@ -246,13 +253,72 @@ def handle_add_node(update, context):
         return update.message.reply_text(
             '⛔️ I have not found a Node with this address! ⛔\nPlease try another one. (enter /cancel to return to the menu)')
 
-    context.user_data['nodes'][address] = {}
-    context.user_data['nodes'][address]['status'] = node['status']
-    context.user_data['nodes'][address]['jailed'] = node['jailed']
-    context.user_data['nodes'][address]['delegator_shares'] = node['delegator_shares']
-
+    add_node_to_user_data(context.user_data, address, node)
     context.bot.send_message(update.effective_chat.id, 'Got it! 👌')
     return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+
+
+def confirm_add_all_nodes(update, context):
+    """
+    Ask user if he really wants to add all available nodes
+    """
+
+    keyboard = [[
+        InlineKeyboardButton('YES ✅', callback_data='add_all_nodes'),
+        InlineKeyboardButton('NO ❌', callback_data='my_nodes')
+    ]]
+    text = '⚠️ Do you really want to *add all* available Terra Nodes to your monitoring list? ⚠️'
+
+    return show_confirmation_menu(update=update, text=text, keyboard=keyboard)
+
+
+def confirm_delete_all_nodes(update, context):
+    """
+    Ask user if he really wants to delete all available nodes
+    """
+
+    keyboard = [[
+        InlineKeyboardButton('YES ✅', callback_data='delete_all_nodes'),
+        InlineKeyboardButton('NO ❌', callback_data='my_nodes')
+    ]]
+    text = '⚠️ Do you really want to *remove all* Terra Nodes from your monitoring list? ⚠️'
+
+    return show_confirmation_menu(update=update, text=text, keyboard=keyboard)
+
+
+def add_all_nodes(update, context):
+    """
+    Add all available node addresses to users monitoring list
+    """
+
+    query = update.callback_query
+
+    nodes = get_validators()
+
+    for node in nodes:
+        address = node['operator_address']
+        if address not in context.user_data['nodes']:
+            add_node_to_user_data(context.user_data, address, node)
+
+    # Send message
+    query.edit_message_text('Added all Terra Nodes! 👌')
+    show_my_nodes_menu_new_msg(context, chat_id=update.effective_chat.id)
+
+
+def delete_all_nodes(update, context):
+    """
+    Delete all node addresses from users monitoring list
+    """
+
+    query = update.callback_query
+
+    context.user_data['nodes'].clear()
+
+    text = '❌ Deleted all Terra Nodes! ❌'
+    # Send message
+    query.edit_message_text(text)
+
+    show_my_nodes_menu_new_msg(context, chat_id=update.effective_chat.id)
 
 
 def node_details(update, context):

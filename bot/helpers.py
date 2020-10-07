@@ -56,7 +56,9 @@ def get_my_nodes_menu_buttons(user_data):
     for address in user_data['nodes'].keys():
         keyboard.append([InlineKeyboardButton("📡 " + address, callback_data='node_details-' + address)])
 
-    keyboard.append([InlineKeyboardButton('➕ ADD NODE', callback_data='add_node'),
+    keyboard.append([InlineKeyboardButton('➕ ADD ALL', callback_data='confirm_add_all_nodes'),
+                     InlineKeyboardButton('➕ ADD NODE', callback_data='add_node')])
+    keyboard.append([InlineKeyboardButton('➖ REMOVE ALL', callback_data='confirm_delete_all_nodes'),
                      InlineKeyboardButton('⬅️ BACK', callback_data='home')])
 
     return keyboard
@@ -83,6 +85,16 @@ def show_detail_menu(update, context):
         ]]
 
     # Modify message
+    query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def show_confirmation_menu(update, text, keyboard):
+    """
+    "Are you sure?" - "YES" | "NO"
+    """
+
+    query = update.callback_query
+
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
@@ -128,9 +140,20 @@ def try_message(context, chat_id, text, reply_markup=None):
             print("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
 
 
-def get_validator(address):
+def add_node_to_user_data(user_data, address, node):
     """
-    Return json of desired validator node
+    Add a node in the user specific dictionary
+    """
+
+    user_data['nodes'][address] = {}
+    user_data['nodes'][address]['status'] = node['status']
+    user_data['nodes'][address]['jailed'] = node['jailed']
+    user_data['nodes'][address]['delegator_shares'] = node['delegator_shares']
+
+
+def get_validators() -> dict:
+    """
+    Return json of all validator nodes
     """
 
     if DEBUG:
@@ -140,13 +163,34 @@ def get_validator(address):
             logger.info("ConnectionError while requesting " + VALIDATORS_ENDPOINT)
             raise ConnectionError
         nodes = response.json()
+        return nodes['result']
+    else:
+        response = requests.get(VALIDATORS_ENDPOINT)
+        if response.status_code != 200:
+            if not is_lcd_reachable():
+                logger.info("ConnectionError while requesting " + NODE_INFO_ENDPOINT)
+                raise ConnectionError
+            else:
+                return None
+
+        nodes = response.json()
+        return nodes['result']
+
+
+def get_validator(address) -> dict:
+    """
+    Return json of desired validator node
+    """
+
+    if DEBUG:
+        nodes = get_validators()
         # Get the right node
-        node = next(filter(lambda node: node['operator_address'] == address, nodes['result']), None)
+        node = next(filter(lambda node: node['operator_address'] == address, nodes), None)
         return node
     else:
         response = requests.get(VALIDATORS_ENDPOINT + "/" + address)
         if response.status_code != 200:
-            if not is_lcd_reachable:
+            if not is_lcd_reachable():
                 logger.info("ConnectionError while requesting " + NODE_INFO_ENDPOINT)
                 raise ConnectionError
             else:
