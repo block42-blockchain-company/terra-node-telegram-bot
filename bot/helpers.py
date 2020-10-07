@@ -167,7 +167,7 @@ def get_validators() -> dict:
     else:
         response = requests.get(VALIDATORS_ENDPOINT)
         if response.status_code != 200:
-            if not is_lcd_reachable:
+            if not is_lcd_reachable():
                 logger.info("ConnectionError while requesting " + NODE_INFO_ENDPOINT)
                 raise ConnectionError
             else:
@@ -190,7 +190,7 @@ def get_validator(address) -> dict:
     else:
         response = requests.get(VALIDATORS_ENDPOINT + "/" + address)
         if response.status_code != 200:
-            if not is_lcd_reachable:
+            if not is_lcd_reachable():
                 logger.info("ConnectionError while requesting " + NODE_INFO_ENDPOINT)
                 raise ConnectionError
             else:

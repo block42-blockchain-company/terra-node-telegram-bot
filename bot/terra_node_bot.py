@@ -312,12 +312,7 @@ def delete_all_nodes(update, context):
 
     query = update.callback_query
 
-    addresses = []
-    for address in context.user_data['nodes']:
-        addresses.append(address)
-
-    for address in addresses:
-        del context.user_data['nodes'][address]
+    context.user_data['nodes'].clear()
 
     text = '❌ Deleted all Terra Nodes! ❌'
     # Send message
