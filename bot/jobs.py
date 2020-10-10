@@ -41,13 +41,11 @@ def check_lcd_reachable(context):
         text = 'The public Lite Client Daemon (LCD) cannot be reached! 💀' + '\n' + \
                'Node monitoring will be restricted to node specific attributes until it is reachable again.'
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
     elif user_data['is_lcd_reachable'] == False and is_lcd_currently_reachable:
         user_data['is_lcd_reachable'] = True
         text = 'The public Lite Client Daemon (LCD) is reachable again! 👌' + '\n' + \
                'Monitoring of publicly available node attributes resumes.'
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
 
     return is_lcd_currently_reachable
 
@@ -76,13 +74,11 @@ def check_node_reachable(context):
                'Node monitoring will be restricted to publicly available node attributes until it is reachable again.' + '\n\n' + \
                'Please check your Terra Node immediately!'
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
     elif user_data['is_node_reachable'] == False and is_node_currently_reachable:
         user_data['is_node_reachable'] = True
         text = 'The specified Node is reachable again! 👌' + '\n' + \
                'Monitoring of node specific attributes resumes.'
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
 
     return is_node_currently_reachable
 
@@ -152,9 +148,6 @@ def check_node_status(context):
     for address in delete_addresses:
         del user_data['nodes'][address]
 
-    if message_sent:
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
-
 
 def check_price_feeder(context):
     """
@@ -178,13 +171,11 @@ def check_price_feeder(context):
             text = 'Price feed is not healthy anymore! 💀' + '\n' + \
                    'Address: ' + address
             send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-            show_home_menu_new_msg(context, chat_id=chat_id)
         elif user_data['is_price_feed_healthy'] == False and is_price_feed_currently_healthy:
             user_data['is_price_feed_healthy'] = True
             text = 'Price feed is healthy again! 👌' + '\n' + \
                    'Address: ' + address + '\n'
             send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-            show_home_menu_new_msg(context, chat_id=chat_id)
 
 
 def check_node_catch_up_status(context):
@@ -211,14 +202,12 @@ def check_node_catch_up_status(context):
                'Current block height: ' + block_height + '\n\n' + \
                'Please check your Terra Node immediately!'
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
     elif user_data['is_catching_up'] == True and not is_currently_catching_up:
         user_data['is_catching_up'] = False
         text = 'The node caught up to the latest block height again! 👌' + '\n' + \
                'IP: ' + NODE_IP + '\n' + \
                'Current block height: ' + block_height
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
 
 
 def check_node_block_height(context):
@@ -267,9 +256,6 @@ def check_node_block_height(context):
     # -1 == just got unstuck
     # > 1 == still stuck
 
-    if user_data['block_height_stuck_count'] == 1 or user_data['block_height_stuck_count'] == -1:
-        show_home_menu_new_msg(context=context, chat_id=chat_id)
-
 
 def check_governance_proposals(context):
     """
@@ -316,6 +302,3 @@ def check_new_goverance_proposal(context):
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     user_data['governance_proposals_count'] = governance_proposals_count
-
-    if new_proposals_count:
-        show_home_menu_new_msg(context=context, chat_id=chat_id)

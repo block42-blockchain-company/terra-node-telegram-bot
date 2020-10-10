@@ -7,6 +7,7 @@ from telegram import ReplyKeyboardMarkup
 from helpers import *
 from constants import *
 from jobs import *
+from messages import NETWORK_ERROR_MSG
 
 from telegram.error import BadRequest
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, \
@@ -108,11 +109,10 @@ def start(update, context):
     text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
            'I will notify you about changes of your node\'s *Jailed*, *Unbonded* or *Delegator Shares*, ' \
            'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
-           'Moreover, I will notify you about new governance proposals!'
+           'Moreover, I will notify you about new *governance proposals* and you can directly *vote* on them!'
 
     # Send message
-    update.message.reply_text(text, parse_mode='markdown')
-    show_home_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+    try_message_with_home_menu(context=context, chat_id=update.effective_chat.id, text=text)
 
 
 @run_async
@@ -379,12 +379,13 @@ def delete_node(update, context):
 
 def governance_menu(update, context):
     """
-    Menu to see results old proposals and vote on ongoing proposals
+    Menu to see results of old proposals and vote on ongoing proposals
     """
 
     try:
         governance_proposals = get_governance_proposals()
     except ConnectionError:
+        try_message_with_home_menu(context, chat_id=update.effective_chat.id, text=NETWORK_ERROR_MSG)
         return
 
     for proposal in governance_proposals:

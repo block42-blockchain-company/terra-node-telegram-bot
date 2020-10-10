@@ -35,4 +35,4 @@ NODE_INFO_ENDPOINT = 'http://localhost:8000/node_info.json' if DEBUG else 'https
 storage_path = os.sep.join([os.path.dirname(os.path.realpath(__file__)), os.path.pardir, 'storage'])
 session_data_path = os.sep.join([storage_path, 'session.data'])
 
-JOB_INTERVAL_IN_SECONDS = 15
+JOB_INTERVAL_IN_SECONDS = 30

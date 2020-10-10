@@ -23,6 +23,15 @@ def show_home_menu_new_msg(context, chat_id):
     try_message(context=context, chat_id=chat_id, text=text, reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
 
+def try_message_with_home_menu(context, chat_id, text):
+    keyboard = get_home_menu_buttons()
+    try_message(context=context,
+                chat_id=chat_id,
+                text=text,
+                reply_markup=ReplyKeyboardMarkup(keyboard,
+                                                 resize_keyboard=True))
+
+
 def show_my_nodes_menu_new_msg(context, chat_id):
     """
     Show My Nodes Menu
@@ -99,8 +108,8 @@ def show_confirmation_menu(update, text, keyboard):
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-def send_message_to_all_platforms(context, chat_id, text, reply_markup=None):
-    try_message(context=context, chat_id=chat_id, text=text, reply_markup=reply_markup)
+def send_message_to_all_platforms(context, chat_id, text):
+    try_message_with_home_menu(context=context, chat_id=chat_id, text=text)
     send_slack_message(text)
 
 
