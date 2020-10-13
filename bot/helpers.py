@@ -1,7 +1,8 @@
 import json
+from datetime import datetime
 
 import requests
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 from requests.exceptions import RequestException
 from constants import *
 
@@ -11,15 +12,13 @@ Helpers
 ######################################################################################################################################################
 """
 
-
-def show_home_menu_new_msg(context, chat_id):
-    """
-    Send a new message with the home menu
-    """
-
+def try_message_with_home_menu(context, chat_id, text):
     keyboard = get_home_menu_buttons()
-    text = 'I am your Terra Node Bot. 🤖\nClick *MY NODES* to get information about the Terra Nodes you monitor!'
-    try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+    try_message(context=context,
+                chat_id=chat_id,
+                text=text,
+                reply_markup=ReplyKeyboardMarkup(keyboard,
+                                                 resize_keyboard=True))
 
 
 def show_my_nodes_menu_new_msg(context, chat_id):
@@ -41,7 +40,8 @@ def get_home_menu_buttons():
     Return Keyboard buttons for the My Nodes menu
     """
 
-    keyboard = [[InlineKeyboardButton('📡 MY NODES', callback_data='my_nodes')]]
+    keyboard = [[KeyboardButton('📡 My Nodes'),
+                 KeyboardButton('🗳 Governance')]]
 
     return keyboard
 
@@ -56,10 +56,9 @@ def get_my_nodes_menu_buttons(user_data):
     for address in user_data['nodes'].keys():
         keyboard.append([InlineKeyboardButton("📡 " + address, callback_data='node_details-' + address)])
 
+    keyboard.append([InlineKeyboardButton('1️⃣ ADD NODE', callback_data='add_node')])
     keyboard.append([InlineKeyboardButton('➕ ADD ALL', callback_data='confirm_add_all_nodes'),
-                     InlineKeyboardButton('➕ ADD NODE', callback_data='add_node')])
-    keyboard.append([InlineKeyboardButton('➖ REMOVE ALL', callback_data='confirm_delete_all_nodes'),
-                     InlineKeyboardButton('⬅️ BACK', callback_data='home')])
+                     InlineKeyboardButton('➖ REMOVE ALL', callback_data='confirm_delete_all_nodes')])
 
     return keyboard
 
@@ -98,8 +97,8 @@ def show_confirmation_menu(update, text, keyboard):
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-def send_message_to_all_platforms(context, chat_id, text, reply_markup=None):
-    try_message(context=context, chat_id=chat_id, text=text, reply_markup=reply_markup)
+def send_message_to_all_platforms(context, chat_id, text):
+    try_message_with_home_menu(context=context, chat_id=chat_id, text=text)
     send_slack_message(text)
 
 
@@ -149,6 +148,23 @@ def add_node_to_user_data(user_data, address, node):
     user_data['nodes'][address]['status'] = node['status']
     user_data['nodes'][address]['jailed'] = node['jailed']
     user_data['nodes'][address]['delegator_shares'] = node['delegator_shares']
+
+
+def proposal_to_text(proposal) -> str:
+    voting_start_time = datetime.strptime(proposal['voting_start_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
+    voting_end_time = datetime.strptime(proposal['voting_end_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
+
+    text = f"*Title:*\n{proposal['content']['value']['title']}\n" + \
+           f"*Type:*\n{proposal['content']['type']}\n" + \
+           f"*Description:*\n{proposal['content']['value']['description']}\n\n" + \
+           f"*Voting Start Time:* {voting_start_time.strftime('%A %B %d, %H:%M')} UTC\n" + \
+           f"*Voting End Time:* {voting_end_time.strftime('%A %B %d, %H:%M')} UTC\n\n"
+    if proposal['proposal_status'] == "Rejected" or proposal['proposal_status'] == "Passed":
+        text += f"Result: *{proposal['proposal_status']}*\n\n"
+    else:
+        text += f"Make sure to vote on this governance proposal until *{voting_end_time.strftime('%A %B %d, %H:%M')} UTC*!"
+
+    return text
 
 
 def get_validators() -> dict:

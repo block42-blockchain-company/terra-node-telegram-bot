@@ -1,9 +1,13 @@
 import atexit
 import re
 import subprocess
+
+from telegram import ReplyKeyboardMarkup
+
 from helpers import *
 from constants import *
 from jobs import *
+from messages import NETWORK_ERROR_MSG
 
 from telegram.error import BadRequest
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, \
@@ -105,11 +109,10 @@ def start(update, context):
     text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
            'I will notify you about changes of your node\'s *Jailed*, *Unbonded* or *Delegator Shares*, ' \
            'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
-           'Moreover, I will notify you about new governance proposals!'
+           'Moreover, I will notify you about new *governance proposals* and you can directly *vote* on them!'
 
     # Send message
-    update.message.reply_text(text, parse_mode='markdown')
-    show_home_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+    try_message_with_home_menu(context=context, chat_id=update.effective_chat.id, text=text)
 
 
 @run_async
@@ -182,10 +185,17 @@ def plain_input(update, context):
     """
     Handle if the users sends a message
     """
+
+    message = update.message.text
     expected = context.user_data['expected'] if 'expected' in context.user_data else None
-    if expected == 'add_node':
+    if message == '📡 My Nodes':
+        return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+    elif message == '🗳 Governance':
+        return governance_menu(update, context)
+    elif expected == 'add_node':
         context.user_data['expected'] = None
         return handle_add_node(update, context)
+
 
 
 @run_async
@@ -205,7 +215,7 @@ def show_home_menu_edit_msg(update, context):
     keyboard = get_home_menu_buttons()
     text = 'I am your Terra Node Bot. 🤖\nClick *MY NODES* to get information about the Terra Nodes you monitor!'
     query = update.callback_query
-    query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='markdown')
+    query.edit_message_text(text, reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True), parse_mode='markdown')
 
 
 def show_my_nodes_menu_edit_msg(update, context):
@@ -366,6 +376,21 @@ def delete_node(update, context):
     query.edit_message_text(text)
     show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
+
+def governance_menu(update, context):
+    """
+    Menu to see results of old proposals and vote on ongoing proposals
+    """
+
+    try:
+        governance_proposals = get_governance_proposals()
+    except ConnectionError:
+        try_message_with_home_menu(context, chat_id=update.effective_chat.id, text=NETWORK_ERROR_MSG)
+        return
+
+    for proposal in governance_proposals:
+        text = proposal_to_text(proposal)
+        try_message(context=context, chat_id=update.effective_chat.id, text=text)
 
 """
 ######################################################################################################################################################
