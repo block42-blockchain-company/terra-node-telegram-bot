@@ -12,17 +12,6 @@ Helpers
 ######################################################################################################################################################
 """
 
-
-def show_home_menu_new_msg(context, chat_id):
-    """
-    Send a new message with the home menu
-    """
-
-    keyboard = get_home_menu_buttons()
-    text = 'I am your Terra Node Bot. 🤖\nClick *MY NODES* to get information about the Terra Nodes you monitor!'
-    try_message(context=context, chat_id=chat_id, text=text, reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
-
-
 def try_message_with_home_menu(context, chat_id, text):
     keyboard = get_home_menu_buttons()
     try_message(context=context,
