@@ -1,7 +1,6 @@
 from datetime import datetime
 from helpers import *
 from constants import *
-
 """
 ######################################################################################################################################################
 Jobs
@@ -119,8 +118,9 @@ def check_node_status(context):
             continue
 
         # Check which node fields have changed
-        changed_fields = [field for field in ['status', 'jailed', 'delegator_shares'] if
-                          local_node[field] != remote_node[field]]
+        changed_fields = [
+            field for field in ['status', 'jailed', 'delegator_shares'] if local_node[field] != remote_node[field]
+        ]
 
         # Check if there are any changes
         if len(changed_fields) > 0:

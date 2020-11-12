@@ -5,20 +5,19 @@ import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 from requests.exceptions import RequestException
 from constants import *
-
 """
 ######################################################################################################################################################
 Helpers
 ######################################################################################################################################################
 """
 
+
 def try_message_with_home_menu(context, chat_id, text):
     keyboard = get_home_menu_buttons()
     try_message(context=context,
                 chat_id=chat_id,
                 text=text,
-                reply_markup=ReplyKeyboardMarkup(keyboard,
-                                                 resize_keyboard=True))
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
 
 def show_my_nodes_menu_new_msg(context, chat_id):
@@ -40,8 +39,7 @@ def get_home_menu_buttons():
     Return Keyboard buttons for the My Nodes menu
     """
 
-    keyboard = [[KeyboardButton('📡 My Nodes'),
-                 KeyboardButton('🗳 Governance')]]
+    keyboard = [[KeyboardButton('📡 My Nodes'), KeyboardButton('🗳 Governance')]]
 
     return keyboard
 
@@ -57,8 +55,10 @@ def get_my_nodes_menu_buttons(user_data):
         keyboard.append([InlineKeyboardButton("📡 " + address, callback_data='node_details-' + address)])
 
     keyboard.append([InlineKeyboardButton('1️⃣ ADD NODE', callback_data='add_node')])
-    keyboard.append([InlineKeyboardButton('➕ ADD ALL', callback_data='confirm_add_all_nodes'),
-                     InlineKeyboardButton('➖ REMOVE ALL', callback_data='confirm_delete_all_nodes')])
+    keyboard.append([
+        InlineKeyboardButton('➕ ADD ALL', callback_data='confirm_add_all_nodes'),
+        InlineKeyboardButton('➖ REMOVE ALL', callback_data='confirm_delete_all_nodes')
+    ])
 
     return keyboard
 
@@ -81,7 +81,7 @@ def show_detail_menu(update, context):
     keyboard = [[
         InlineKeyboardButton('➖ DELETE NODE', callback_data='confirm_node_deletion'),
         InlineKeyboardButton('⬅️ BACK', callback_data='my_nodes')
-        ]]
+    ]]
 
     # Modify message
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
@@ -281,7 +281,8 @@ def get_price_feed_prevotes(address):
     else:
         response = requests.get('https://lcd.terra.dev/oracle/voters/' + address + '/prevotes')
         if response.status_code != 200:
-            logger.info("ConnectionError while requesting https://lcd.terra.dev/oracle/voters/" + address + "/prevotes")
+            logger.info("ConnectionError while requesting https://lcd.terra.dev/oracle/voters/" + address +
+                        "/prevotes")
             raise ConnectionError
         return response.json()
 

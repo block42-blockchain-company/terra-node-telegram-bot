@@ -1,6 +1,5 @@
 import os
 import logging
-
 """
 ######################################################################################################################################################
 Static & environment variables
@@ -11,13 +10,11 @@ DEBUG = bool(os.environ.get('DEBUG') == "True")
 TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
 
-
 # Set NODE_IP depending on mode (if None, certain node health jobs are not executed)
 if DEBUG:
     NODE_IP = 'localhost'
 else:
     NODE_IP = os.environ.get('NODE_IP') if os.environ.get('NODE_IP') else None
-
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)

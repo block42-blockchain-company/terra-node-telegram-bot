@@ -12,7 +12,6 @@ from messages import NETWORK_ERROR_MSG
 from telegram.error import BadRequest
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, \
     run_async
-
 """
 ######################################################################################################################################################
 Debug Processes
@@ -29,14 +28,12 @@ if DEBUG:
     increase_block_height_process = subprocess.Popen(['python3', increase_block_height_path], cwd=test_dir)
     update_local_price_feed = subprocess.Popen(['python3', update_local_price_feed_path], cwd=test_dir)
 
-
     def cleanup():
         mock_api_process.terminate()
         increase_block_height_process.terminate()
         update_local_price_feed.terminate()
 
     atexit.register(cleanup)
-
 """
 ######################################################################################################################################################
 BOT RESTART SETUP
@@ -58,9 +55,12 @@ def setup_existing_user(dispatcher):
                           'a fresh chat with me by typing /start.'
         try:
             dispatcher.bot.send_message(chat_id, restart_message)
-            dispatcher.job_queue.run_repeating(node_checks, interval=JOB_INTERVAL_IN_SECONDS, context={
-                'chat_id': chat_id, 'user_data': dispatcher.user_data[chat_id]
-            })
+            dispatcher.job_queue.run_repeating(node_checks,
+                                               interval=JOB_INTERVAL_IN_SECONDS,
+                                               context={
+                                                   'chat_id': chat_id,
+                                                   'user_data': dispatcher.user_data[chat_id]
+                                               })
         except TelegramError as e:
             if 'bot was blocked by the user' in e.message:
                 delete_chat_ids.append(chat_id)
@@ -99,10 +99,12 @@ def start(update, context):
 
     # Start job for user
     if 'job_started' not in context.user_data:
-        context.job_queue.run_repeating(node_checks, interval=JOB_INTERVAL_IN_SECONDS, context={
-            'chat_id': update.message.chat.id,
-            'user_data': context.user_data
-        })
+        context.job_queue.run_repeating(node_checks,
+                                        interval=JOB_INTERVAL_IN_SECONDS,
+                                        context={
+                                            'chat_id': update.message.chat.id,
+                                            'user_data': context.user_data
+                                        })
         context.user_data['job_started'] = True
         context.user_data['nodes'] = {}
 
@@ -197,7 +199,6 @@ def plain_input(update, context):
         return handle_add_node(update, context)
 
 
-
 @run_async
 def error(update, context):
     """
@@ -215,7 +216,9 @@ def show_home_menu_edit_msg(update, context):
     keyboard = get_home_menu_buttons()
     text = 'I am your Terra Node Bot. 🤖\nClick *MY NODES* to get information about the Terra Nodes you monitor!'
     query = update.callback_query
-    query.edit_message_text(text, reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True), parse_mode='markdown')
+    query.edit_message_text(text,
+                            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                            parse_mode='markdown')
 
 
 def show_my_nodes_menu_edit_msg(update, context):
@@ -261,7 +264,8 @@ def handle_add_node(update, context):
     if node is None:
         context.user_data['expected'] = 'add_node'
         return update.message.reply_text(
-            '⛔️ I have not found a Node with this address! ⛔\nPlease try another one. (enter /cancel to return to the menu)')
+            '⛔️ I have not found a Node with this address! ⛔\nPlease try another one. (enter /cancel to return to the menu)'
+        )
 
     add_node_to_user_data(context.user_data, address, node)
     context.bot.send_message(update.effective_chat.id, 'Got it! 👌')
@@ -391,6 +395,7 @@ def governance_menu(update, context):
     for proposal in governance_proposals:
         text = proposal_to_text(proposal)
         try_message(context=context, chat_id=update.effective_chat.id, text=text)
+
 
 """
 ######################################################################################################################################################
