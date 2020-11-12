@@ -1,12 +1,12 @@
 name: YAPF Formatting
 on:
   push:
-    branches: [ feature/vote-on-proposals ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 jobs:
   formatting:
-    name: Formatting Check
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
