@@ -14,8 +14,8 @@ jobs:
       uses: block42-blockchain-company/yapf-action@master
       with:
         args: "--verbose --style='{based_on_style: pep8; COLUMN_LIMIT: 119}'"
-    - uses: stefanzweifel/git-auto-commit-action@v4
     - name: Commit formatted code
+      uses: stefanzweifel/git-auto-commit-action@v4
       with:
         commit_message: YAPF format
         commit_user_name: block42-laborer
