@@ -1,10 +1,11 @@
 import json
-from datetime import datetime
 
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 from requests.exceptions import RequestException
 from constants import *
+from service.governance_service import get_all_proposals_as_messages
+
 """
 ######################################################################################################################################################
 Helpers
@@ -29,7 +30,16 @@ def show_my_nodes_menu_new_msg(context, chat_id):
 
     keyboard = get_my_nodes_menu_buttons(user_data=user_data)
     text = 'Click an address from the list below or add a node:' if len(keyboard) > 2 else 'You do not monitor any ' \
-                                                                                        'Terra Nodes yet.\nAdd a Node!'
+                                                                                           'Terra Nodes yet.\nAdd a Node!'
+
+    try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def show_governance_menu(context, chat_id):
+    text = 'Click an option'
+
+    keyboard = [[InlineKeyboardButton("🗳 Show all proposals", callback_data='governance-all')],
+                [InlineKeyboardButton("Show active proposals and vote", callback_data='governance-active')]]
 
     try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -85,6 +95,16 @@ def show_detail_menu(update, context):
 
     # Modify message
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def on_show_all_proposals_clicked(update, context):
+    query = update.callback_query
+
+    messages = get_all_proposals_as_messages()
+    query.edit_message_text("All proposals")
+
+    for message in messages:
+        try_message(context, query['message']['chat']['id'], message, reply_markup=None)
 
 
 def show_confirmation_menu(update, text, keyboard):
@@ -148,23 +168,6 @@ def add_node_to_user_data(user_data, address, node):
     user_data['nodes'][address]['status'] = node['status']
     user_data['nodes'][address]['jailed'] = node['jailed']
     user_data['nodes'][address]['delegator_shares'] = node['delegator_shares']
-
-
-def proposal_to_text(proposal) -> str:
-    voting_start_time = datetime.strptime(proposal['voting_start_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
-    voting_end_time = datetime.strptime(proposal['voting_end_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
-
-    text = f"*Title:*\n{proposal['content']['value']['title']}\n" + \
-           f"*Type:*\n{proposal['content']['type']}\n" + \
-           f"*Description:*\n{proposal['content']['value']['description']}\n\n" + \
-           f"*Voting Start Time:* {voting_start_time.strftime('%A %B %d, %H:%M')} UTC\n" + \
-           f"*Voting End Time:* {voting_end_time.strftime('%A %B %d, %H:%M')} UTC\n\n"
-    if proposal['proposal_status'] == "Rejected" or proposal['proposal_status'] == "Passed":
-        text += f"Result: *{proposal['proposal_status']}*\n\n"
-    else:
-        text += f"Make sure to vote on this governance proposal until *{voting_end_time.strftime('%A %B %d, %H:%M')} UTC*!"
-
-    return text
 
 
 def get_validators() -> dict:
@@ -285,17 +288,3 @@ def get_price_feed_prevotes(address):
                         "/prevotes")
             raise ConnectionError
         return response.json()
-
-
-def get_governance_proposals():
-    """
-    Return all governance proposals
-    """
-
-    response = requests.get(url=GOVERNANCE_PROPOSAL_ENDPOINT)
-    if response.status_code != 200:
-        logger.info("ConnectionError while requesting " + GOVERNANCE_PROPOSAL_ENDPOINT)
-        raise ConnectionError
-
-    governance_proposals = response.json()
-    return governance_proposals['result']

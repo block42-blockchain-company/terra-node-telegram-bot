@@ -1,6 +1,8 @@
 from datetime import datetime
 from helpers import *
 from constants import *
+from service.governance_service import get_governance_proposals
+
 """
 ######################################################################################################################################################
 Jobs

@@ -12,6 +12,7 @@ from messages import NETWORK_ERROR_MSG
 from telegram.error import BadRequest
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, \
     run_async
+
 """
 ######################################################################################################################################################
 Debug Processes
@@ -28,10 +29,12 @@ if DEBUG:
     increase_block_height_process = subprocess.Popen(['python3', increase_block_height_path], cwd=test_dir)
     update_local_price_feed = subprocess.Popen(['python3', update_local_price_feed_path], cwd=test_dir)
 
+
     def cleanup():
         mock_api_process.terminate()
         increase_block_height_process.terminate()
         update_local_price_feed.terminate()
+
 
     atexit.register(cleanup)
 """
@@ -163,6 +166,10 @@ def dispatch_query(update, context):
         call = delete_node
     elif data == 'show_detail_menu':
         call = show_detail_menu
+    elif data == 'governance-all':
+        call = on_show_all_proposals_clicked
+    elif data == 'governance-active':
+        call = lambda x, y: print('governance-active')
     else:
         edit = False
 
@@ -193,7 +200,7 @@ def plain_input(update, context):
     if message == '📡 My Nodes':
         return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
     elif message == '🗳 Governance':
-        return governance_menu(update, context)
+        return show_governance_menu(context=context, chat_id=update.effective_chat.id)
     elif expected == 'add_node':
         context.user_data['expected'] = None
         return handle_add_node(update, context)
@@ -228,7 +235,7 @@ def show_my_nodes_menu_edit_msg(update, context):
 
     keyboard = get_my_nodes_menu_buttons(user_data=context.user_data)
     text = 'Click an address from the list below or add a node:' if len(keyboard) > 2 else 'You do not monitor any ' \
-                                                                                        'Terra Nodes yet.\nAdd a Node!'
+                                                                                           'Terra Nodes yet.\nAdd a Node!'
     query = update.callback_query
     query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -379,22 +386,6 @@ def delete_node(update, context):
     query.answer(text)
     query.edit_message_text(text)
     show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
-
-
-def governance_menu(update, context):
-    """
-    Menu to see results of old proposals and vote on ongoing proposals
-    """
-
-    try:
-        governance_proposals = get_governance_proposals()
-    except ConnectionError:
-        try_message_with_home_menu(context, chat_id=update.effective_chat.id, text=NETWORK_ERROR_MSG)
-        return
-
-    for proposal in governance_proposals:
-        text = proposal_to_text(proposal)
-        try_message(context=context, chat_id=update.effective_chat.id, text=text)
 
 
 """

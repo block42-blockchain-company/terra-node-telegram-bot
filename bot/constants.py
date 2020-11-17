@@ -1,10 +1,14 @@
 import os
 import logging
+
 """
 ######################################################################################################################################################
 Static & environment variables
 ######################################################################################################################################################
 """
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 DEBUG = bool(os.environ.get('DEBUG') == "True")
 TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
@@ -16,9 +20,16 @@ if DEBUG:
 else:
     NODE_IP = os.environ.get('NODE_IP') if os.environ.get('NODE_IP') else None
 
-# Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
+MNEMONIC = os.environ.get('MNEMONIC', '')
+
+if MNEMONIC:
+    ALLOWED_USER_IDS = list(
+        map(lambda uid: int(uid), filter(lambda uid: uid, os.getenv('ALLOWED_USER_IDS', '').split(","))))
+    if not ALLOWED_USER_IDS:
+        logger.warning("You set your mnemonic key but didn't set whitelisted telegram users!"
+                       " No one will be able to invoke protected operations!")
+    else:
+        logger.warning(f"Users allowed to invoke protected operations: {str(ALLOWED_USER_IDS)}")
 
 NODE_STATUSES = ["Unbonded", "Unbonding", "Bonded"]
 
