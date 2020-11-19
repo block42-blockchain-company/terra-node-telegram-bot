@@ -19,7 +19,8 @@ MNEMONIC = os.environ.get('MNEMONIC', '')
 
 if MNEMONIC:
     ALLOWED_USER_IDS = list(
-        map(lambda uid: int(uid), filter(lambda uid: uid, os.getenv('ALLOWED_USER_IDS', '').split(","))))
+        map(lambda uid: int(uid), filter(lambda uid: uid,
+                                         os.getenv('ALLOWED_USER_IDS', '').split(","))))
     if not ALLOWED_USER_IDS:
         logger.warning("You set your mnemonic key but didn't set whitelisted telegram users!"
                        " No one will be able to invoke protected operations!")
