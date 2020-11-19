@@ -99,7 +99,7 @@ def check_node_status(context):
     delete_addresses = []
 
     # Iterate through all keys
-    for address in user_data['nodes'].keys():
+    for address in user_data.get('nodes', {}).keys():
         try:
             remote_node = get_validator(address=address)
         except ConnectionError:
@@ -159,7 +159,7 @@ def check_price_feeder(context):
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
 
-    for address in user_data['nodes'].keys():
+    for address in user_data.get('nodes', {}).keys():
         if 'is_price_feed_healthy' not in user_data:
             user_data['is_price_feed_healthy'] = True
 
