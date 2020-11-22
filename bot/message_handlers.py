@@ -179,10 +179,8 @@ def handle_add_node(update, context):
 
     if node is None:
         context.user_data['expected'] = 'add_node'
-        return update.message.reply_text(
-            '⛔️ I have not found a Node with this address! ⛔\n'
-            'Please try another one. (enter /cancel to return to the menu)'
-        )
+        return update.message.reply_text('⛔️ I have not found a Node with this address! ⛔\n'
+                                         'Please try another one. (enter /cancel to return to the menu)')
 
     add_node_to_user_data(context.user_data, address, node)
     context.bot.send_message(update.effective_chat.id, 'Got it! 👌')

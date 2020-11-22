@@ -6,7 +6,6 @@ from jobs import *
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
 from message_handlers import start, cancel, dispatch_query, plain_input, log_error
-
 """
 ######################################################################################################################################################
 Debug Processes
@@ -23,15 +22,12 @@ if DEBUG:
     increase_block_height_process = subprocess.Popen(['python3', increase_block_height_path], cwd=test_dir)
     update_local_price_feed = subprocess.Popen(['python3', update_local_price_feed_path], cwd=test_dir)
 
-
     def cleanup():
         mock_api_process.terminate()
         increase_block_height_process.terminate()
         update_local_price_feed.terminate()
 
-
     atexit.register(cleanup)
-
 """
 ######################################################################################################################################################
 BOT RESTART SETUP

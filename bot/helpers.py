@@ -9,7 +9,6 @@ from constants import *
 from messages import NETWORK_ERROR_MSG
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
     jigu_proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided
-
 """
 ######################################################################################################################################################
 Helpers
@@ -131,7 +130,9 @@ def on_show_active_proposals_clicked(update, context):
     for proposal in active_proposals:
         keyboard.append([InlineKeyboardButton(str(proposal.content.title), callback_data=f'proposal-{proposal.id}')])
 
-    try_message(context=context, chat_id=query['message']['chat']['id'], text=text,
+    try_message(context=context,
+                chat_id=query['message']['chat']['id'],
+                text=text,
                 reply_markup=InlineKeyboardMarkup(keyboard))
 
 
@@ -147,8 +148,7 @@ def vote_on_proposal_details(update, _):
         return
 
     proposal_txt = jigu_proposal_to_text(proposal)
-    keyboard = [
-        [InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
+    keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
 
     message = ''
 
@@ -170,15 +170,16 @@ def vote_on_proposal_details(update, _):
             keyboard = [[
                 InlineKeyboardButton('✅ Yes', callback_data=f'vote-{proposal_id}-{MsgVote.YES}'),
                 InlineKeyboardButton('❌ No', callback_data=f'vote-{proposal_id}-{MsgVote.NO}'),
-            ], [
-                InlineKeyboardButton('❌❌ No with veto', callback_data=f'vote-{proposal_id}-{MsgVote.NO_WITH_VETO}'),
-                InlineKeyboardButton('🤷 Abstain', callback_data=f'vote-{proposal_id}-{MsgVote.ABSTAIN}'),
-            ], [InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
+            ],
+                        [
+                            InlineKeyboardButton('❌❌ No with veto',
+                                                 callback_data=f'vote-{proposal_id}-{MsgVote.NO_WITH_VETO}'),
+                            InlineKeyboardButton('🤷 Abstain', callback_data=f'vote-{proposal_id}-{MsgVote.ABSTAIN}'),
+                        ], [InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
 
     message += f"\n\n\n{proposal_txt}"
 
-    query.edit_message_text(message, parse_mode='markdown',
-                            reply_markup=InlineKeyboardMarkup(keyboard))
+    query.edit_message_text(message, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 def on_vote_clicked(update, _):
@@ -212,7 +213,8 @@ def vote_accept(update, _):
         query.edit_message_text(message, reply_markup=InlineKeyboardMarkup(keyboard))
         return
 
-    query.edit_message_text(f"Successfully voted *{vote}* on proposal with id *{proposal_id}*", parse_mode='markdown',
+    query.edit_message_text(f"Successfully voted *{vote}* on proposal with id *{proposal_id}*",
+                            parse_mode='markdown',
                             reply_markup=InlineKeyboardMarkup(keyboard))
 
 
@@ -234,8 +236,7 @@ def send_message_to_all_platforms(context, chat_id, text):
 def send_slack_message(text):
     if SLACK_WEBHOOK:
         try:
-            requests.post(SLACK_WEBHOOK, data=json.dumps({'text': text}),
-                          headers={'Content-Type': 'application/json'})
+            requests.post(SLACK_WEBHOOK, data=json.dumps({'text': text}), headers={'Content-Type': 'application/json'})
         except RequestException as e:
             logger.error(f"Slack Webhook post request failed with:\n{e}")
 
