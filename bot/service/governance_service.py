@@ -147,28 +147,25 @@ def terra_timestamp_to_datetime(timestamp: str) -> datetime:
 def estimate_vote_fee(proposal_id, voter_address, option):
     json = {
         "tx": {
-            "type": "core/StdTx",
+            "type":
+            "core/StdTx",
             "fee": {
                 "gas": "0"
             },
-            "msg": [
-                {
-                    "type": "gov/MsgVote",
-                    "value": {
-                        "proposal_id": proposal_id,
-                        "voter": voter_address,
-                        "option": option
-                    }
+            "msg": [{
+                "type": "gov/MsgVote",
+                "value": {
+                    "proposal_id": proposal_id,
+                    "voter": voter_address,
+                    "option": option
                 }
-            ]
+            }]
         },
         "gas_adjustment": terra.gas_adjustment,
-        "gas_prices": [
-            {
-                "denom": "uluna",
-                "amount": "0.015000000000000000"
-            }
-        ]
+        "gas_prices": [{
+            "denom": "uluna",
+            "amount": "0.015000000000000000"
+        }]
     }
 
     repsonse = requests.post(f"{lcd_url}txs/estimate_fee", json=json)

@@ -3,7 +3,6 @@ from datetime import datetime
 from helpers import *
 from constants import *
 from service.governance_service import get_governance_proposals, terra_timestamp_to_datetime, proposal_to_text
-
 """
 ######################################################################################################################################################
 Jobs
