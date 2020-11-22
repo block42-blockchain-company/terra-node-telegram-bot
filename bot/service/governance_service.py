@@ -11,6 +11,7 @@ from telegram.utils.helpers import escape_markdown
 from constants import GOVERNANCE_PROPOSAL_ENDPOINT, logger, MNEMONIC, DEBUG
 from messages import NETWORK_ERROR_MSG
 
+# TODO: discuss and choose usage of jigu or rest
 if DEBUG and MNEMONIC:
     lcd_url = 'http://0.0.0.0:1317/'
     terra = Terra(None, lcd_url)
@@ -148,7 +149,7 @@ def estimate_vote_fee(proposal_id, voter_address, option):
     json = {
         "tx": {
             "type":
-            "core/StdTx",
+                "core/StdTx",
             "fee": {
                 "gas": "0"
             },

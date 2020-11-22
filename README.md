@@ -9,6 +9,7 @@ Features:
 * Notifications if your **Block Height** gets stuck
 * Notifications if **Price Feed** gets unhealthy
 * Notifications about new **Governance Proposals**
+* Notifications about finished **Governance Proposals**
 * Voting on **Governance Proposals**
 * Notifications on **Slack**
 
@@ -37,7 +38,7 @@ Leave it empty or remove it to not get notified via Slack.
 Optionally set
 - `MNEMONIC` to your 24-word mnemonic phrase of your wallet you want to vote with
 - `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to perform transactions. If you set a mnemonic
-phrase you must also set at least one allowed user id.
+phrase you *MUST* also set at least one allowed user id.
 Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
 
 
@@ -261,7 +262,7 @@ pytest -v unit_test.py
 After all tests finished check that all tests passed.
 
 ### <a name="local-terra">LocalTerra</a>
-To test the transaction methods, like voting on proposals, you need to set up LocalTerra environment. 
+To test the transaction invoking operations, like voting on proposals, you need to set up LocalTerra environment. 
 To do it you need docker daemon running. When it's ready just type in these commands:
 ```
 git clone https://www.github.com/terra-project/LocalTerra

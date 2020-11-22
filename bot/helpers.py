@@ -9,6 +9,7 @@ from constants import *
 from messages import NETWORK_ERROR_MSG
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
     jigu_proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided
+
 """
 ######################################################################################################################################################
 Helpers
@@ -112,7 +113,6 @@ def on_show_all_proposals_clicked(update, context):
 
 def on_show_active_proposals_clicked(update, context):
     query = update.callback_query
-    keyboard = [[]]
 
     try:
         active_proposals = get_active_proposals()
@@ -124,11 +124,14 @@ def on_show_active_proposals_clicked(update, context):
     text = '🗳 ✅ **Active proposals**🗳 ✅ \n' \
            'Click on any of the proposals to see details and vote options.\n\n'
 
+    keyboard = [[]]
+
     if not active_proposals:
         text += "No active proposals at the moment."
-
-    for proposal in active_proposals:
-        keyboard.append([InlineKeyboardButton(str(proposal.content.title), callback_data=f'proposal-{proposal.id}')])
+    else:
+        for proposal in active_proposals:
+            button = InlineKeyboardButton(str(proposal.content.title), callback_data=f'proposal-{proposal.id}')
+            keyboard.append([button])
 
     try_message(context=context,
                 chat_id=query['message']['chat']['id'],
@@ -140,6 +143,7 @@ def vote_on_proposal_details(update, _):
     query = update.callback_query
     proposal_id = query.data.split("-")[-1]
     user_id = query.from_user['id']
+
     try:
         proposal = get_proposal_by_id(proposal_id)
     except Exception as e:
@@ -147,9 +151,7 @@ def vote_on_proposal_details(update, _):
         query.edit_message_text(NETWORK_ERROR_MSG)
         return
 
-    proposal_txt = jigu_proposal_to_text(proposal)
     keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
-
     message = ''
 
     if not is_wallet_provided():
@@ -160,24 +162,27 @@ def vote_on_proposal_details(update, _):
         try:
             my_vote = get_my_vote(proposal_id)
         except Exception as e:
-            logger.error(e)
+            logger.error(e, exc_info=True)
             query.edit_message_text(NETWORK_ERROR_MSG)
             return
 
         if my_vote:
             message = f'🎉 You voted *{my_vote}* 🎉'
         else:
-            keyboard = [[
-                InlineKeyboardButton('✅ Yes', callback_data=f'vote-{proposal_id}-{MsgVote.YES}'),
-                InlineKeyboardButton('❌ No', callback_data=f'vote-{proposal_id}-{MsgVote.NO}'),
-            ],
-                        [
-                            InlineKeyboardButton('❌❌ No with veto',
-                                                 callback_data=f'vote-{proposal_id}-{MsgVote.NO_WITH_VETO}'),
-                            InlineKeyboardButton('🤷 Abstain', callback_data=f'vote-{proposal_id}-{MsgVote.ABSTAIN}'),
-                        ], [InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
+            keyboard = [
+                [
+                    InlineKeyboardButton('✅ Yes', callback_data=f'vote-{proposal_id}-{MsgVote.YES}'),
+                    InlineKeyboardButton('❌ No', callback_data=f'vote-{proposal_id}-{MsgVote.NO}'),
+                ],
+                [
+                    InlineKeyboardButton('❌❌ No with veto',
+                                         callback_data=f'vote-{proposal_id}-{MsgVote.NO_WITH_VETO}'),
+                    InlineKeyboardButton('🤷 Abstain', callback_data=f'vote-{proposal_id}-{MsgVote.ABSTAIN}'),
+                ],
+                [InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]
+            ]
 
-    message += f"\n\n\n{proposal_txt}"
+    message += f"\n\n\n{jigu_proposal_to_text(proposal)}"
 
     query.edit_message_text(message, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
