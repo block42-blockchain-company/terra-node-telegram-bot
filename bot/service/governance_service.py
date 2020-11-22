@@ -6,17 +6,20 @@ from jigu import Terra
 from jigu.core import Proposal, AccAddress, StdFee
 from jigu.core.msg import MsgVote
 from jigu.key.mnemonic import MnemonicKey
+from telegram.utils.helpers import escape_markdown
 
-from constants import GOVERNANCE_PROPOSAL_ENDPOINT, logger, MNEMONIC, NODE_IP, DEBUG
+from constants import GOVERNANCE_PROPOSAL_ENDPOINT, logger, MNEMONIC, DEBUG
 from messages import NETWORK_ERROR_MSG
 
 if DEBUG and MNEMONIC:
-    terra = Terra(None, 'http://0.0.0.0:1317/')
+    lcd_url = 'http://0.0.0.0:1317/'
+    terra = Terra(None, lcd_url)
 
     if not terra.is_connected():
         raise Exception(f"I can't connect to the local Terra API! Is LocalTerra running?")
 else:
-    terra = Terra(None, 'https://lcd.terra.dev/')
+    lcd_url = 'https://lcd.terra.dev/'
+    terra = Terra(None, lcd_url)
 
     if not terra.is_connected():
         raise Exception(f"I can't connect to the Terra LCD API!")
@@ -88,21 +91,27 @@ def vote_on_proposal(proposal_id: int, vote_option: str) -> (bool, None):
         option=vote_option,
     )
 
+    # TODO remove this when bug in jigu Terra.estimate_fee() function is fixed
+    fee = estimate_vote_fee(proposal_id, wallet.address, vote_option)
+    gas = fee['result']['gas']
+    uluna_fee = int(next(filter(lambda d: d['denom'] == 'uluna', fee['result']['fees']))['amount']) * 10
+
     tx = wallet.create_and_sign_tx(
         vote_message,
-        fee=StdFee.make(gas=200_000, uluna=1_000_000)  # Fixme - why auto fee doesn't work?
+        fee=StdFee.make(gas=gas, uluna=uluna_fee),
     )
 
+    # TODO change mode to 'block' when jigu bug fixed (throws error "SUCCESS" even when broadcasted successfully)
     return terra.broadcast(tx, mode="sync")
 
 
 def proposal_to_text(proposal) -> str:
-    voting_start_time = datetime.strptime(proposal['voting_start_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
-    voting_end_time = datetime.strptime(proposal['voting_end_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
+    voting_start_time = terra_timestamp_to_datetime(proposal['voting_start_time'])
+    voting_end_time = terra_timestamp_to_datetime(proposal['voting_end_time'])
 
-    text = f"*Title:*\n{proposal['content']['value']['title']}\n" + \
-           f"*Type:*\n{proposal['content']['type']}\n" + \
-           f"*Description:*\n{proposal['content']['value']['description']}\n\n" + \
+    text = f"*Title:*\n{escape_markdown(proposal['content']['value']['title'])}\n" + \
+           f"*Type:*\n{escape_markdown(proposal['content']['type'])}\n" + \
+           f"*Description:*\n{escape_markdown(proposal['content']['value']['description'])}\n\n" + \
            f"*Voting Start Time:* {voting_start_time.strftime('%A %B %d, %H:%M')} UTC\n" + \
            f"*Voting End Time:* {voting_end_time.strftime('%A %B %d, %H:%M')} UTC\n\n"
     if proposal['proposal_status'] == "Rejected" or proposal['proposal_status'] == "Passed":
@@ -116,9 +125,9 @@ def proposal_to_text(proposal) -> str:
 def jigu_proposal_to_text(proposal: Proposal) -> str:
     status = proposal.proposal_status
 
-    text = f"*Title:*\n{proposal.content.title}\n" + \
-           f"*Type:*\n{proposal.content.type}\n" + \
-           f"*Description:*\n{proposal.content.description}\n\n" + \
+    text = f"*Title:*\n{escape_markdown(proposal.content.title)}\n" + \
+           f"*Type:*\n{escape_markdown(proposal.content.type)}\n" + \
+           f"*Description:*\n{escape_markdown(proposal.content.description)}\n\n" + \
            f"*Voting Start Time:* {proposal.voting_start_time.strftime('%A %B %d, %H:%M')} UTC\n" + \
            f"*Voting End Time:* {proposal.voting_end_time.strftime('%A %B %d, %H:%M')} UTC\n\n"
     if status == "Rejected" or status == "Passed":
@@ -128,3 +137,39 @@ def jigu_proposal_to_text(proposal: Proposal) -> str:
                 f" *{proposal.voting_end_time.strftime('%A %B %d, %H:%M')} UTC*!"
 
     return text
+
+
+def terra_timestamp_to_datetime(timestamp: str) -> datetime:
+    return datetime.strptime(timestamp[:-4], "%Y-%m-%dT%H:%M:%S.%f")
+
+
+# TODO remove this when bug in jigu Terra.estimate_fee() function is fixed
+def estimate_vote_fee(proposal_id, voter_address, option):
+    json = {
+        "tx": {
+            "type": "core/StdTx",
+            "fee": {
+                "gas": "0"
+            },
+            "msg": [
+                {
+                    "type": "gov/MsgVote",
+                    "value": {
+                        "proposal_id": proposal_id,
+                        "voter": voter_address,
+                        "option": option
+                    }
+                }
+            ]
+        },
+        "gas_adjustment": terra.gas_adjustment,
+        "gas_prices": [
+            {
+                "denom": "uluna",
+                "amount": "0.015000000000000000"
+            }
+        ]
+    }
+
+    repsonse = requests.post(f"{lcd_url}txs/estimate_fee", json=json)
+    return repsonse.json()

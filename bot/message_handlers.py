@@ -28,7 +28,8 @@ def start(update, context):
     text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
            'I will notify you about changes of your node\'s *Jailed*, *Unbonded* or *Delegator Shares*, ' \
            'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
-           'Moreover, I will notify you about new *governance proposals* and you can directly *vote* on them!'
+           'Moreover, I will notify you about finished and new *governance proposals*. ' \
+           'You can also directly *vote* on them!'
 
     # Send message
     try_message_with_home_menu(context=context, chat_id=update.effective_chat.id, text=text)

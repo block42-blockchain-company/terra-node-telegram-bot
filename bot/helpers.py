@@ -4,6 +4,7 @@ import requests
 from jigu.core.msg import MsgVote
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 from requests.exceptions import RequestException
+
 from constants import *
 from messages import NETWORK_ERROR_MSG
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
@@ -203,7 +204,13 @@ def vote_accept(update, _):
         logger.info(f"Voted successfully. Transaction result:\n{vote_result}")
     except Exception as e:
         logger.error(e)
-        query.edit_message_text(NETWORK_ERROR_MSG, reply_markup=InlineKeyboardMarkup(keyboard))
+        message = NETWORK_ERROR_MSG
+        if hasattr(e, 'doc'):
+            message = "😱 There was an error while voting 😱.\n Error details:\n\n"
+            message += e.doc
+
+        query.edit_message_text(message, reply_markup=InlineKeyboardMarkup(keyboard))
+        return
 
     query.edit_message_text(f"Successfully voted *{vote}* on proposal with id *{proposal_id}*", parse_mode='markdown',
                             reply_markup=InlineKeyboardMarkup(keyboard))

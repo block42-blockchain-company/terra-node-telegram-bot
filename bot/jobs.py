@@ -1,7 +1,8 @@
+import copy
 from datetime import datetime
 from helpers import *
 from constants import *
-from service.governance_service import get_governance_proposals
+from service.governance_service import get_governance_proposals, terra_timestamp_to_datetime, proposal_to_text
 
 """
 ######################################################################################################################################################
@@ -264,21 +265,23 @@ def check_governance_proposals(context):
     Monitoring related to governance proposals
     """
 
-    check_new_goverance_proposal(context)
+    try:
+        governance_proposals = get_governance_proposals()
+    except ConnectionError as e:
+        logger.error(e)
+        return
+
+    check_new_goverance_proposal(context, governance_proposals)
+    check_results_of_proposals(context, governance_proposals)
 
 
-def check_new_goverance_proposal(context):
+def check_new_goverance_proposal(context, governance_proposals):
     """
     Notify the user if there's a new governance proposals
     """
 
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
-
-    try:
-        governance_proposals = get_governance_proposals()
-    except ConnectionError:
-        return
 
     governance_proposals_count = len(governance_proposals)
 
@@ -289,8 +292,8 @@ def check_new_goverance_proposal(context):
     for i in range(new_proposals_count):
         current_proposal = governance_proposals[user_data['governance_proposals_count'] + i]
 
-        voting_start_time = datetime.strptime(current_proposal['voting_start_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
-        voting_end_time = datetime.strptime(current_proposal['voting_end_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
+        voting_start_time = terra_timestamp_to_datetime(current_proposal['voting_start_time'])
+        voting_end_time = terra_timestamp_to_datetime(current_proposal['voting_end_time'])
 
         text = 'A new governance proposal got submitted! 📣\n\n' + \
                '*Title:*\n' + current_proposal['content']['value']['title'] + '\n' + \
@@ -304,3 +307,39 @@ def check_new_goverance_proposal(context):
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     user_data['governance_proposals_count'] = governance_proposals_count
+
+
+def check_results_of_proposals(context, governance_proposals):
+    user_data = context.job.context['user_data']
+    get_active_proposals()
+
+    active_proposals = list(filter(lambda p: p['proposal_status'] == 'VotingPeriod', governance_proposals))
+    proposal_results_data = copy.deepcopy(user_data.setdefault('proposal_results_data', {}))
+
+    # save new proposals
+    for proposal in active_proposals:
+        end_date = proposal['voting_end_time']
+        proposal_id = proposal['id']
+
+        if proposal_id not in proposal_results_data:
+            user_data.setdefault('proposal_results_data', {})[proposal_id] = end_date
+
+    # send notifications
+    for proposal_id, end_date in proposal_results_data.items():
+        end_date = terra_timestamp_to_datetime(end_date)
+        is_past = end_date < datetime.now()
+
+        if is_past:
+            past_proposal = next(filter(lambda p: p['id'] == proposal_id, governance_proposals), None)
+            del user_data['proposal_results_data'][proposal_id]
+            result = past_proposal['final_tally_result']
+
+            message = "* ‼️ This proposal has ended ‼️*\n\n" \
+                      f"{proposal_to_text(past_proposal)}\n\n" \
+                      "*Results:*\n\n" \
+                      f"*✅ Yes*: {result['yes']}\n" \
+                      f"*❌ No*: {result['no']}\n" \
+                      f"*❌❌ No with veto*: {result['no_with_veto']}\n" \
+                      f"*🤷 Abstain*: {result['abstain']}\n"
+
+            try_message(context=context, chat_id=context.job.context['chat_id'], text=message)
