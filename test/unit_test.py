@@ -155,28 +155,6 @@ class TerraNodeBot(unittest.TestCase):
     def test_catch_up_notification_is_not_catching_up(self):
         self.assert_catch_up_notification(catching_up=False)
 
-    def test_new_governance_proposal_notification(self):
-        with open('governance_proposals.json') as json_read_file:
-            governance_proposals = json.load(json_read_file)
-            governance_proposals_new = copy.deepcopy(governance_proposals)
-
-        new_proposal = governance_proposals['result'][random.randrange(0, 8)]
-        governance_proposals_new['result'].append(new_proposal)
-
-        time.sleep(20)
-        with open('governance_proposals.json', 'w') as json_write_file:
-            json.dump(governance_proposals_new, json_write_file)
-        time.sleep(20)
-
-        with self.telegram:
-            first_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
-            second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
-
-        self.assertNotEqual(first_response.text.find(new_proposal['content']['value']['title']), -1, \
-                            "Expected '" + json.dumps(new_proposal) + "' but got '" + first_response.text + "'")
-        self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
-                        "'I am your Terra Node Bot. 🤖' - not visible after node address change notification.")
-
     def test_lcd_unreachable_notification(self):
         self.assert_unreachable_notification(file_name="node_info",
                                              expected1="The public Lite Client Daemon (LCD) cannot be reached!",
@@ -245,7 +223,7 @@ class TerraNodeBot(unittest.TestCase):
 
             self.assertEqual(
                 first_response.text, '⚠️ Do you really want to remove the address from your monitoring '
-                'list? ⚠️\n' + valid_address, "➖ DELETE NODE button doesn't work!")
+                                     'list? ⚠️\n' + valid_address, "➖ DELETE NODE button doesn't work!")
 
             if confirm:
                 self.click_button("YES ✅")
@@ -253,7 +231,7 @@ class TerraNodeBot(unittest.TestCase):
                 second_response_1 = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 1, None))
                 second_response_2 = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
                 self.assertEqual(second_response_1.text, "❌ Node address got deleted! ❌\n" + valid_address, \
-                    "YES button on deletion confirmation does not yield deletion statement")
+                                 "YES button on deletion confirmation does not yield deletion statement")
                 self.assertTrue(re.search("add a node", second_response_2.text, re.IGNORECASE),
                                 "YES button on deletion confirmation does not go back to nodes menu")
             else:
@@ -261,7 +239,7 @@ class TerraNodeBot(unittest.TestCase):
                 time.sleep(3)
                 second_response = next(self.telegram.iter_history(self.BOT_ID))
                 self.assertNotEqual(second_response.text.find("Node: " + valid_address), -1, \
-                    "NO button on single address deletion confirmation does not go back to Node details")
+                                    "NO button on single address deletion confirmation does not go back to Node details")
 
     def assert_add_all_nodes(self, confirm):
         with self.telegram:
@@ -372,12 +350,13 @@ class TerraNodeBot(unittest.TestCase):
             expected_response = 'Node: ' + node_data_original['result'][0]['operator_address'] + '\n' + \
                                 'Status: ' + NODE_STATUSES[node_data_original['result'][0]['status']] + \
                                 '\nJailed: ' + str(node_data_original['result'][0]['jailed']) + \
-                                '\nDelegator Shares: ' + str(int(float(node_data_original['result'][0]['delegator_shares']))) + \
+                                '\nDelegator Shares: ' + str(
+                int(float(node_data_original['result'][0]['delegator_shares']))) + \
                                 ' ➡️ ' + str(int(float(node_data_new['result'][0]['delegator_shares'])))
         else:
             self.assertTrue(
                 False, "The argument" + field +
-                "that you passed as 'field' to assert_node_change_notification is not defined")
+                       "that you passed as 'field' to assert_node_change_notification is not defined")
 
         with open('validators.json', 'w') as json_write_file:
             json.dump(node_data_new, json_write_file)
@@ -431,7 +410,7 @@ class TerraNodeBot(unittest.TestCase):
             second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
 
         self.assertNotEqual(first_response.text.find(expected_response1), -1, "Expected '" + expected_response1 + \
-                                                                  "'\nbut got\n'" + first_response.text + "'")
+                            "'\nbut got\n'" + first_response.text + "'")
         self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
                         "'I am your Terra Node Bot. 🤖' - not visible after block height notification.")
 
@@ -441,7 +420,7 @@ class TerraNodeBot(unittest.TestCase):
             second_response = next(itertools.islice(self.telegram.iter_history(self.BOT_ID), 0, None))
 
         self.assertNotEqual(first_response.text.find(expected_response2), -1, "Expected '" + expected_response2 + \
-                                                                  "'\nbut got\n'" + first_response.text + "'")
+                            "'\nbut got\n'" + first_response.text + "'")
         self.assertTrue(re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
                         "'I am your Terra Node Bot. 🤖' - not visible after block height notification.")
 
@@ -458,7 +437,7 @@ class TerraNodeBot(unittest.TestCase):
             expected_response = 'The node caught up to the latest block height again!'
 
         self.assertNotEqual(first_response.text.find(expected_response), -1, "Expected '" + expected_response + \
-                                                                  "'\nbut got\n'" + first_response.text + "'")
+                            "'\nbut got\n'" + first_response.text + "'")
         self.assertTrue(
             re.search("I am your Terra Node Bot. 🤖", second_response.text, re.IGNORECASE),
             "'I am your Terra Node Bot. 🤖' - not visible after catching_up=" + str(catching_up) + " notification")

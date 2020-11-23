@@ -32,7 +32,6 @@ NODE_STATUSES = ["Unbonded", "Unbonding", "Bonded"]
 # Endpoints
 VALIDATORS_ENDPOINT = 'http://localhost:8000/validators.json' if DEBUG else 'https://lcd.terra.dev/staking/validators'
 NODE_STATUS_ENDPOINT = 'http://localhost:8000/status.json' if DEBUG else 'http://' + str(NODE_IP) + ':26657/status'
-GOVERNANCE_PROPOSAL_ENDPOINT = 'http://localhost:8000/governance_proposals.json' if DEBUG else 'https://lcd.terra.dev/gov/proposals'
 NODE_INFO_ENDPOINT = 'http://localhost:8000/node_info.json' if DEBUG else 'https://lcd.terra.dev/node_info'
 
 # Paths

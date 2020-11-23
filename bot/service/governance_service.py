@@ -9,11 +9,11 @@ from jigu.core.msg import MsgVote
 from jigu.key.mnemonic import MnemonicKey
 from telegram.utils.helpers import escape_markdown
 
-from constants import GOVERNANCE_PROPOSAL_ENDPOINT, logger, MNEMONIC, DEBUG
+from constants import logger, MNEMONIC, DEBUG
 from messages import NETWORK_ERROR_MSG
 
 # TODO: discuss and choose usage of jigu or rest
-if DEBUG and MNEMONIC:
+if DEBUG:
     lcd_url = 'http://0.0.0.0:1317/'
     terra = Terra(None, lcd_url)
 
@@ -33,14 +33,13 @@ def get_governance_proposals():
     """
     Return all governance proposals
     """
-
-    response = requests.get(url=GOVERNANCE_PROPOSAL_ENDPOINT)
-    if response.status_code != 200:
-        logger.info("ConnectionError while requesting " + GOVERNANCE_PROPOSAL_ENDPOINT)
+    try:
+        proposals = terra.gov.proposals()
+    except Exception as e:
+        logger.error(e, exc_info=True)
         raise ConnectionError
 
-    governance_proposals = response.json()
-    return governance_proposals['result']
+    return proposals
 
 
 def get_all_proposals_as_messages() -> List[str]:
@@ -107,24 +106,7 @@ def vote_on_proposal(proposal_id: int, vote_option: str) -> (bool, None):
     return terra.broadcast(tx, mode="sync")
 
 
-def proposal_to_text(proposal) -> str:
-    voting_start_time = terra_timestamp_to_datetime(proposal['voting_start_time'])
-    voting_end_time = terra_timestamp_to_datetime(proposal['voting_end_time'])
-
-    text = f"*Title:*\n{escape_markdown(proposal['content']['value']['title'])}\n" + \
-           f"*Type:*\n{escape_markdown(proposal['content']['type'])}\n" + \
-           f"*Description:*\n{escape_markdown(proposal['content']['value']['description'])}\n\n" + \
-           f"*Voting Start Time:* {voting_start_time.strftime('%A %B %d, %H:%M')} UTC\n" + \
-           f"*Voting End Time:* {voting_end_time.strftime('%A %B %d, %H:%M')} UTC\n\n"
-    if proposal['proposal_status'] == "Rejected" or proposal['proposal_status'] == "Passed":
-        text += f"Result: *{proposal['proposal_status']}*\n\n"
-    else:
-        text += f"Make sure to vote on this governance proposal until *{voting_end_time.strftime('%A %B %d, %H:%M')} UTC*!"
-
-    return text
-
-
-def jigu_proposal_to_text(proposal: Proposal) -> str:
+def proposal_to_text(proposal: Proposal) -> str:
     status = proposal.proposal_status
 
     text = f"*Title:*\n{escape_markdown(proposal.content.title)}\n" + \

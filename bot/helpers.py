@@ -8,7 +8,7 @@ from requests.exceptions import RequestException
 from constants import *
 from messages import NETWORK_ERROR_MSG
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
-    jigu_proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided, BadMnemonicException
+    proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided, BadMnemonicException
 
 """
 ######################################################################################################################################################
@@ -183,7 +183,7 @@ def vote_on_proposal_details(update, context):
                 [InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]
             ]
 
-    message += f"\n\n\n{jigu_proposal_to_text(proposal)}"
+    message += f"\n\n\n{proposal_to_text(proposal)}"
 
     query.edit_message_text(message, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
