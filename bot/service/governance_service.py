@@ -171,4 +171,16 @@ def estimate_vote_fee(proposal_id, voter_address, option):
     }
 
     repsonse = requests.post(f"{lcd_url}txs/estimate_fee", json=json)
+
+    if not repsonse.ok:
+        error = repsonse.json()['error']
+        if 'unknown address' in error:
+            raise BadMnemonicException()
+        else:
+            raise Exception(error)
+
     return repsonse.json()
+
+
+class BadMnemonicException(Exception):
+    pass

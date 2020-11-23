@@ -8,7 +8,7 @@ from requests.exceptions import RequestException
 from constants import *
 from messages import NETWORK_ERROR_MSG
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
-    jigu_proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided
+    jigu_proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided, BadMnemonicException
 
 """
 ######################################################################################################################################################
@@ -210,6 +210,11 @@ def vote_accept(update, _):
     try:
         vote_result = vote_on_proposal(proposal_id=proposal_id, vote_option=vote)
         logger.info(f"Voted successfully. Transaction result:\n{vote_result}")
+    except BadMnemonicException as e:
+        logger.error(e, exc_info=True)
+        query.edit_message_text('😱 Your mnemonic key is incorrect! 😱.',
+                                reply_markup=InlineKeyboardMarkup(keyboard))
+        return
     except Exception as e:
         logger.error(e)
         message = NETWORK_ERROR_MSG
