@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List
 
+import dateutil.parser
 import requests
 from jigu import Terra
 from jigu.core import Proposal, AccAddress, StdFee
@@ -141,7 +142,7 @@ def jigu_proposal_to_text(proposal: Proposal) -> str:
 
 
 def terra_timestamp_to_datetime(timestamp: str) -> datetime:
-    return datetime.strptime(timestamp[:-4], "%Y-%m-%dT%H:%M:%S.%f")
+    return dateutil.parser.parse(timestamp)
 
 
 # TODO remove this when bug in jigu Terra.estimate_fee() function is fixed
