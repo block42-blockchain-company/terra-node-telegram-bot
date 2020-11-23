@@ -7,18 +7,15 @@ Static & environment variables
 ######################################################################################################################################################
 """
 
-DEBUG = bool(os.environ['DEBUG'] == 'True') if 'DEBUG' in os.environ else False
+DEBUG = bool(os.environ.get('DEBUG') == 'True')
 TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
-LCD_ENDPOINT = os.environ['LCD_ENDPOINT'] if 'LCD_ENDPOINT' in os.environ and os.environ['LCD_ENDPOINT'] \
-    else "lcd.terra.dev"
+LCD_ENDPOINT = os.environ['LCD_ENDPOINT'] if os.environ.get('LCD_ENDPOINT') else "lcd.terra.dev"
 
 # Set NODE_IP depending on mode (if None, certain node health jobs are not executed)
 if DEBUG:
     NODE_IP = 'localhost'
-elif 'NODE_IP' in os.environ and os.environ['NODE_IP']:
-    NODE_IP = os.environ['NODE_IP']
 else:
-    NODE_IP = None
+    NODE_IP = os.environ.get('NODE_IP')
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
