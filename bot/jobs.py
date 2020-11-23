@@ -3,6 +3,7 @@ from datetime import datetime
 from helpers import *
 from constants import *
 from service.governance_service import get_governance_proposals, terra_timestamp_to_datetime, proposal_to_text
+
 """
 ######################################################################################################################################################
 Jobs
@@ -326,7 +327,7 @@ def check_results_of_proposals(context, governance_proposals):
     # send notifications
     for proposal_id, end_date in proposal_results_data.items():
         end_date = terra_timestamp_to_datetime(end_date)
-        is_past = end_date < datetime.now()
+        is_past = end_date < datetime.now(end_date.tzinfo)
 
         if is_past:
             past_proposal = next(filter(lambda p: p['id'] == proposal_id, governance_proposals), None)
