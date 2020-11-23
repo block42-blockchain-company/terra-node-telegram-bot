@@ -26,7 +26,7 @@ Install docker and run:
 
 ```
 docker volume create terra-node-bot-volume
-docker run -d --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --env SLACK_WEBHOOK=XXX --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
+docker run -d --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --env SLACK_WEBHOOK=XXX --env LCD_ENDPOINT=1.2.3.4 --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
 ```
 Set 
 - `TELEGRAM_BOT_TOKEN` to your Telegram Bot Token obtained from BotFather.
@@ -34,6 +34,8 @@ Set
 Leave it empty or remove it to only monitor public Node information.
 - `SLACK_WEBHOOK` to the webhook of your Slack channel to receive notifications on [Slack](https://slack.com). 
 Leave it empty or remove it to not get notified via Slack.
+- `LCD_ENDPOINT` to your Node's IP if you have setup the Light Client Daemon on your Node. If not, leave this
+variable empty or remove it to use the public `lcd.terra.dev` lcd server.
 
 Optionally set
 - `MNEMONIC` to your 24-word mnemonic phrase of your wallet you want to vote with
@@ -46,6 +48,7 @@ Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` ar
 * [Install dependencies](#install-dependencies)
 * [Create Telegram Bot token](#create-telegram-bot-token-via-botfather) via [BotFather]((https://t.me/BotFather))
 * [Set up Slack Webhook](#set-up-slack-webhook)
+* [Set up Light Client Daemon (LCD)](#set-up-lcd)
 * [Set environment variables](#set-environment-variables)
 * [Start the bot](#start-the-bot)
 * [Run and test the bot](#run-and-test-the-bot)
@@ -76,6 +79,13 @@ At the end of step 3, you should be able to get your Webhook URL similar to this
 https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
 Save this webhook, you will neet it later.
+
+## [Set up Light Client Daemon (LCD)](#set-up-lcd)
+The default configuration of the bot uses the official public LCD endpoint for the queries `lcd.terra.dev`.
+This can become an issue when the public endpoint starts rate limiting the requests of the bot.
+To prevent this from happening, one can specify his Node's own LCD server as an environment variable.
+To set up your own LCD server of your terra node, follow the official docs:
+https://docs.terra.money/terracli/lcd.html
 
 ## [Set environment variables](#set-environment-variables)
 Set the Telegram Bot token you previously created as the environment variable `TELEGRAM_BOT_TOKEN`:
@@ -121,6 +131,19 @@ or
 ```
 export NODE_IP=3.228.22.197
 ```
+---
+Another variable you can optionally specify is `LCD_ENDPOINT`:
+```
+export LCD_ENDPOINT=3.228.22.197
+```
+
+Set it to your Node IP. 
+If you don't have your own LCD server set up yet, follow the official docs 
+https://docs.terra.money/terracli/lcd.html .
+
+Don't set this environment variable to use the public LCD server at `lcd.terra.dev`, but be aware that 
+the bot might run into rate limiting issues using this endpoint.
+
 ---
 Finally, if you want test the Terra Node Monitoring Telegram Bot with data from your local machine, you
 need to set the debug environment variable:
@@ -188,7 +211,7 @@ docker volume create terra-node-bot-volume
 Finally run the docker container:
 
 ```
-docker run --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --env SLACK_WEBHOOK=XXX --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
+docker run --env TELEGRAM_BOT_TOKEN=XXX --env NODE_IP=XXX --env SLACK_WEBHOOK=XXX --env LCD_ENDPOINT=1.2.3.4 --mount source=terra-node-bot-volume,target=/storage block42blockchaincompany/terra-node-bot:latest
 ```
 
 Set the `--env TELEGRAM_BOT_TOKEN` flag to your Telegram Bot token.
@@ -198,6 +221,9 @@ leave this empty i.e. `--env SLACK_WEBHOOK=` or remove it altogether.
 
 Set the `--env NODE_IP` flag to an IP of a running node or `localhost`.
 If you don't know any IP leave this empty i.e. `--env NODE_IP=` or remove it completely.
+
+Set the `--env LCD_ENDPOINT` flag to your node IP if you have set up your own LCD server. Leave it empty
+or remove the variable to use the public LCD endpoint at `lcd.terra.dev`.
 
 Finally, the `--mount` flag tells docker to mount our previously created volume in the directory `storage`. 
 This is the directory where your bot saves and retrieves the `session.data` file.
