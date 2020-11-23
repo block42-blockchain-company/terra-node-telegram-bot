@@ -139,13 +139,14 @@ def on_show_active_proposals_clicked(update, context):
                 reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-def vote_on_proposal_details(update, _):
+def vote_on_proposal_details(update, context):
     query = update.callback_query
     proposal_id = query.data.split("-")[-1]
     user_id = query.from_user['id']
 
     try:
         proposal = get_proposal_by_id(proposal_id)
+        context.user_data.setdefault('proposals_cache', {})[proposal_id] = {'title': proposal.content.title}
     except Exception as e:
         logger.error(e)
         query.edit_message_text(NETWORK_ERROR_MSG)
@@ -187,15 +188,16 @@ def vote_on_proposal_details(update, _):
     query.edit_message_text(message, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-def on_vote_clicked(update, _):
+def on_vote_clicked(update, context):
     query = update.callback_query
     _, proposal_id, vote = query.data.split("-")
+    proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
 
     keyboard = [[
         InlineKeyboardButton('YES ✅', callback_data=f'vote_confirmed-{proposal_id}-{vote}'),
         InlineKeyboardButton('NO ❌', callback_data=f'proposal-{proposal_id}')
     ]]
-    text = f'⚠️ Do you really want to vote *{vote}* on proposal *{proposal_id}*? ⚠️'
+    text = f'⚠️ Do you really want to vote *{vote}* on proposal *{proposal_title}*? ⚠️'
 
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
