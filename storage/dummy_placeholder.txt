@@ -1,1 +1,0 @@
-This file makes sure that the storage/ folder exists on github
