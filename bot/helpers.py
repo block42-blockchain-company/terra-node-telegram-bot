@@ -202,9 +202,10 @@ def on_vote_clicked(update, context):
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-def vote_accept(update, _):
+def vote_accept(update, context):
     query = update.callback_query
     _, proposal_id, vote = query.data.split("-")
+    proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
     keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data=f'proposal-{proposal_id}')]]
 
     try:
@@ -225,7 +226,7 @@ def vote_accept(update, _):
         query.edit_message_text(message, reply_markup=InlineKeyboardMarkup(keyboard))
         return
 
-    query.edit_message_text(f"Successfully voted *{vote}* on proposal with id *{proposal_id}*",
+    query.edit_message_text(f"Successfully voted *{vote}* on proposal *{proposal_title}*.",
                             parse_mode='markdown',
                             reply_markup=InlineKeyboardMarkup(keyboard))
 
