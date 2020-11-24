@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 DEBUG = bool(os.environ.get('DEBUG') == "True")
 TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
-LCD_ENDPOINT = os.environ['LCD_ENDPOINT'] if os.environ.get('LCD_ENDPOINT') else "lcd.terra.dev"
+adjustLCD_ENDPOINT = f"{os.environ['LCD_ENDPOINT']}:1317" if os.environ.get('LCD_ENDPOINT') else "lcd.terra.dev"
 
 # Set NODE_IP depending on mode (if None, certain node health jobs are not executed)
 if DEBUG:
@@ -31,9 +31,9 @@ if MNEMONIC:
 NODE_STATUSES = ["Unbonded", "Unbonding", "Bonded"]
 
 # Endpoints
-VALIDATORS_ENDPOINT = 'http://localhost:8000/validators.json' if DEBUG else f'https://{LCD_ENDPOINT}/staking/validators'
+VALIDATORS_ENDPOINT = 'http://localhost:8000/validators.json' if DEBUG else f'http://{LCD_ENDPOINT}/staking/validators'
 NODE_STATUS_ENDPOINT = 'http://localhost:8000/status.json' if DEBUG else 'http://' + str(NODE_IP) + ':26657/status'
-NODE_INFO_ENDPOINT = 'http://localhost:8000/node_info.json' if DEBUG else f'https://{LCD_ENDPOINT}/node_info'
+NODE_INFO_ENDPOINT = 'http://localhost:8000/node_info.json' if DEBUG else f'http://{LCD_ENDPOINT}/node_info'
 
 # Paths
 storage_path = os.sep.join([os.path.dirname(os.path.realpath(__file__)), os.path.pardir, 'storage'])
