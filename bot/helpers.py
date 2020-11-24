@@ -156,7 +156,8 @@ def vote_on_proposal_details(update, context):
     message = ''
 
     if not is_wallet_provided():
-        message = f"😢 *You can't vote, no MNEMONIC key provided.* 😢"
+        message = f"😢 *You can't vote, no MNEMONIC key provided.*\n" \
+                  f"Please visit https://station.terra.money/governance to vote.😢"
     elif user_id not in ALLOWED_USER_IDS:
         message = f'😢 *You are not allowed to vote because your id ({user_id}) is not whitelisted!* 😢'
     else:
