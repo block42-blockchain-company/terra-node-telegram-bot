@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 DEBUG = bool(os.environ.get('DEBUG') == "True")
 TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
-adjustLCD_ENDPOINT = f"{os.environ['LCD_ENDPOINT']}:1317" if os.environ.get('LCD_ENDPOINT') else "lcd.terra.dev"
+LCD_ENDPOINT = f"{os.environ['LCD_ENDPOINT']}:1317" if os.environ.get('LCD_ENDPOINT') else "lcd.terra.dev"
 
 # Set NODE_IP depending on mode (if None, certain node health jobs are not executed)
 if DEBUG:
