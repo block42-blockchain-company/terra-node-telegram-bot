@@ -1,10 +1,14 @@
 import json
-from datetime import datetime
 
 import requests
+from jigu.core.msg import MsgVote
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 from requests.exceptions import RequestException
+
 from constants import *
+from messages import NETWORK_ERROR_MSG
+from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
+    proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided, BadMnemonicException
 
 """
 ######################################################################################################################################################
@@ -12,13 +16,13 @@ Helpers
 ######################################################################################################################################################
 """
 
+
 def try_message_with_home_menu(context, chat_id, text):
     keyboard = get_home_menu_buttons()
     try_message(context=context,
                 chat_id=chat_id,
                 text=text,
-                reply_markup=ReplyKeyboardMarkup(keyboard,
-                                                 resize_keyboard=True))
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
 
 def show_my_nodes_menu_new_msg(context, chat_id):
@@ -30,7 +34,16 @@ def show_my_nodes_menu_new_msg(context, chat_id):
 
     keyboard = get_my_nodes_menu_buttons(user_data=user_data)
     text = 'Click an address from the list below or add a node:' if len(keyboard) > 2 else 'You do not monitor any ' \
-                                                                                        'Terra Nodes yet.\nAdd a Node!'
+                                                                                           'Terra Nodes yet.\nAdd a Node!'
+
+    try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def show_governance_menu(context, chat_id):
+    text = 'Click an option'
+
+    keyboard = [[InlineKeyboardButton("🗳 Show all proposals", callback_data='governance_all')],
+                [InlineKeyboardButton("🗳 ✅ Show active proposals and vote", callback_data='governance_active')]]
 
     try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -40,8 +53,7 @@ def get_home_menu_buttons():
     Return Keyboard buttons for the My Nodes menu
     """
 
-    keyboard = [[KeyboardButton('📡 My Nodes'),
-                 KeyboardButton('🗳 Governance')]]
+    keyboard = [[KeyboardButton('📡 My Nodes'), KeyboardButton('🗳 Governance')]]
 
     return keyboard
 
@@ -57,8 +69,10 @@ def get_my_nodes_menu_buttons(user_data):
         keyboard.append([InlineKeyboardButton("📡 " + address, callback_data='node_details-' + address)])
 
     keyboard.append([InlineKeyboardButton('1️⃣ ADD NODE', callback_data='add_node')])
-    keyboard.append([InlineKeyboardButton('➕ ADD ALL', callback_data='confirm_add_all_nodes'),
-                     InlineKeyboardButton('➖ REMOVE ALL', callback_data='confirm_delete_all_nodes')])
+    keyboard.append([
+        InlineKeyboardButton('➕ ADD ALL', callback_data='confirm_add_all_nodes'),
+        InlineKeyboardButton('➖ REMOVE ALL', callback_data='confirm_delete_all_nodes')
+    ])
 
     return keyboard
 
@@ -81,10 +95,140 @@ def show_detail_menu(update, context):
     keyboard = [[
         InlineKeyboardButton('➖ DELETE NODE', callback_data='confirm_node_deletion'),
         InlineKeyboardButton('⬅️ BACK', callback_data='my_nodes')
-        ]]
+    ]]
 
     # Modify message
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def on_show_all_proposals_clicked(update, context):
+    query = update.callback_query
+
+    messages = get_all_proposals_as_messages()
+    query.edit_message_text("All proposals")
+
+    for message in messages:
+        try_message(context, query['message']['chat']['id'], message, reply_markup=None)
+
+
+def on_show_active_proposals_clicked(update, context):
+    query = update.callback_query
+
+    try:
+        active_proposals = get_active_proposals()
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        try_message(context=context, chat_id=query['message']['chat']['id'], text=NETWORK_ERROR_MSG)
+        return
+
+    text = '🗳 ✅ **Active proposals**🗳 ✅ \n' \
+           'Click on any of the proposals to see details and vote options.\n\n'
+
+    keyboard = [[]]
+
+    if not active_proposals:
+        text += "No active proposals at the moment."
+    else:
+        for proposal in active_proposals:
+            button = InlineKeyboardButton(str(proposal.content.title), callback_data=f'proposal-{proposal.id}')
+            keyboard.append([button])
+
+    try_message(context=context,
+                chat_id=query['message']['chat']['id'],
+                text=text,
+                reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def vote_on_proposal_details(update, context):
+    query = update.callback_query
+    proposal_id = query.data.split("-")[-1]
+    user_id = query.from_user['id']
+
+    try:
+        proposal = get_proposal_by_id(proposal_id)
+        context.user_data.setdefault('proposals_cache', {})[proposal_id] = {'title': proposal.content.title}
+    except Exception as e:
+        logger.error(e)
+        query.edit_message_text(NETWORK_ERROR_MSG)
+        return
+
+    keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
+    message = ''
+
+    if not is_wallet_provided():
+        message = f"😢 *You can't vote, no MNEMONIC key provided.* 😢"
+    elif user_id not in ALLOWED_USER_IDS:
+        message = f'😢 *You are not allowed to vote because your id ({user_id}) is not whitelisted!* 😢'
+    else:
+        try:
+            my_vote = get_my_vote(proposal_id)
+        except Exception as e:
+            logger.error(e, exc_info=True)
+            query.edit_message_text(NETWORK_ERROR_MSG)
+            return
+
+        if my_vote:
+            message = f'🎉 You voted *{my_vote}* 🎉'
+        else:
+            keyboard = [
+                [
+                    InlineKeyboardButton('✅ Yes', callback_data=f'vote-{proposal_id}-{MsgVote.YES}'),
+                    InlineKeyboardButton('❌ No', callback_data=f'vote-{proposal_id}-{MsgVote.NO}'),
+                ],
+                [
+                    InlineKeyboardButton('❌❌ No with veto',
+                                         callback_data=f'vote-{proposal_id}-{MsgVote.NO_WITH_VETO}'),
+                    InlineKeyboardButton('🤷 Abstain', callback_data=f'vote-{proposal_id}-{MsgVote.ABSTAIN}'),
+                ],
+                [InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]
+            ]
+
+    message += f"\n\n\n{proposal_to_text(proposal)}"
+
+    query.edit_message_text(message, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def on_vote_clicked(update, context):
+    query = update.callback_query
+    _, proposal_id, vote = query.data.split("-")
+    proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
+
+    keyboard = [[
+        InlineKeyboardButton('YES ✅', callback_data=f'vote_confirmed-{proposal_id}-{vote}'),
+        InlineKeyboardButton('NO ❌', callback_data=f'proposal-{proposal_id}')
+    ]]
+    text = f'⚠️ Do you really want to vote *{vote}* on proposal *{proposal_title}*? ⚠️'
+
+    query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+def vote_accept(update, context):
+    query = update.callback_query
+    _, proposal_id, vote = query.data.split("-")
+    proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
+    keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data=f'proposal-{proposal_id}')]]
+
+    try:
+        vote_result = vote_on_proposal(proposal_id=proposal_id, vote_option=vote)
+        logger.info(f"Voted successfully. Transaction result:\n{vote_result}")
+    except BadMnemonicException as e:
+        logger.error(e, exc_info=True)
+        query.edit_message_text('😱 Your mnemonic key is incorrect! 😱.',
+                                reply_markup=InlineKeyboardMarkup(keyboard))
+        return
+    except Exception as e:
+        logger.error(e)
+        message = NETWORK_ERROR_MSG
+        if hasattr(e, 'doc'):
+            message = "😱 There was an error while voting 😱.\n Error details:\n\n"
+            message += e.doc
+
+        query.edit_message_text(message, reply_markup=InlineKeyboardMarkup(keyboard))
+        return
+
+    query.edit_message_text(f"Successfully voted *{vote}* on proposal *{proposal_title}*.",
+                            parse_mode='markdown',
+                            reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 def show_confirmation_menu(update, text, keyboard):
@@ -148,23 +292,6 @@ def add_node_to_user_data(user_data, address, node):
     user_data['nodes'][address]['status'] = node['status']
     user_data['nodes'][address]['jailed'] = node['jailed']
     user_data['nodes'][address]['delegator_shares'] = node['delegator_shares']
-
-
-def proposal_to_text(proposal) -> str:
-    voting_start_time = datetime.strptime(proposal['voting_start_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
-    voting_end_time = datetime.strptime(proposal['voting_end_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
-
-    text = f"*Title:*\n{proposal['content']['value']['title']}\n" + \
-           f"*Type:*\n{proposal['content']['type']}\n" + \
-           f"*Description:*\n{proposal['content']['value']['description']}\n\n" + \
-           f"*Voting Start Time:* {voting_start_time.strftime('%A %B %d, %H:%M')} UTC\n" + \
-           f"*Voting End Time:* {voting_end_time.strftime('%A %B %d, %H:%M')} UTC\n\n"
-    if proposal['proposal_status'] == "Rejected" or proposal['proposal_status'] == "Passed":
-        text += f"Result: *{proposal['proposal_status']}*\n\n"
-    else:
-        text += f"Make sure to vote on this governance proposal until *{voting_end_time.strftime('%A %B %d, %H:%M')} UTC*!"
-
-    return text
 
 
 def get_validators() -> dict:
@@ -281,20 +408,7 @@ def get_price_feed_prevotes(address):
     else:
         response = requests.get('https://lcd.terra.dev/oracle/voters/' + address + '/prevotes')
         if response.status_code != 200:
-            logger.info("ConnectionError while requesting https://lcd.terra.dev/oracle/voters/" + address + "/prevotes")
+            logger.info("ConnectionError while requesting https://lcd.terra.dev/oracle/voters/" + address +
+                        "/prevotes")
             raise ConnectionError
         return response.json()
-
-
-def get_governance_proposals():
-    """
-    Return all governance proposals
-    """
-
-    response = requests.get(url=GOVERNANCE_PROPOSAL_ENDPOINT)
-    if response.status_code != 200:
-        logger.info("ConnectionError while requesting " + GOVERNANCE_PROPOSAL_ENDPOINT)
-        raise ConnectionError
-
-    governance_proposals = response.json()
-    return governance_proposals['result']

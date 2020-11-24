@@ -2,11 +2,7 @@ import os
 
 from pyrogram import Client as TelegramClient
 
-telegram = TelegramClient(
-    ":memory:",
-    api_id=os.environ['TELEGRAM_API_ID'],
-    api_hash=os.environ['TELEGRAM_API_HASH']
-)
+telegram = TelegramClient(":memory:", api_id=os.environ['TELEGRAM_API_ID'], api_hash=os.environ['TELEGRAM_API_HASH'])
 
 with telegram:
     print("Successfully logged in!")

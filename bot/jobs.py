@@ -1,6 +1,7 @@
-from datetime import datetime
+import copy
 from helpers import *
 from constants import *
+from service.governance_service import get_governance_proposals, proposal_to_text
 
 """
 ######################################################################################################################################################
@@ -98,7 +99,7 @@ def check_node_status(context):
     delete_addresses = []
 
     # Iterate through all keys
-    for address in user_data['nodes'].keys():
+    for address in user_data.get('nodes', {}).keys():
         try:
             remote_node = get_validator(address=address)
         except ConnectionError:
@@ -119,8 +120,9 @@ def check_node_status(context):
             continue
 
         # Check which node fields have changed
-        changed_fields = [field for field in ['status', 'jailed', 'delegator_shares'] if
-                          local_node[field] != remote_node[field]]
+        changed_fields = [
+            field for field in ['status', 'jailed', 'delegator_shares'] if local_node[field] != remote_node[field]
+        ]
 
         # Check if there are any changes
         if len(changed_fields) > 0:
@@ -157,7 +159,7 @@ def check_price_feeder(context):
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
 
-    for address in user_data['nodes'].keys():
+    for address in user_data.get('nodes', {}).keys():
         if 'is_price_feed_healthy' not in user_data:
             user_data['is_price_feed_healthy'] = True
 
@@ -262,21 +264,23 @@ def check_governance_proposals(context):
     Monitoring related to governance proposals
     """
 
-    check_new_goverance_proposal(context)
+    try:
+        governance_proposals = get_governance_proposals()
+    except ConnectionError as e:
+        logger.error(e)
+        return
+
+    check_new_goverance_proposal(context, governance_proposals)
+    check_results_of_proposals(context, governance_proposals)
 
 
-def check_new_goverance_proposal(context):
+def check_new_goverance_proposal(context, governance_proposals):
     """
     Notify the user if there's a new governance proposals
     """
 
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
-
-    try:
-        governance_proposals = get_governance_proposals()
-    except ConnectionError:
-        return
 
     governance_proposals_count = len(governance_proposals)
 
@@ -287,13 +291,13 @@ def check_new_goverance_proposal(context):
     for i in range(new_proposals_count):
         current_proposal = governance_proposals[user_data['governance_proposals_count'] + i]
 
-        voting_start_time = datetime.strptime(current_proposal['voting_start_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
-        voting_end_time = datetime.strptime(current_proposal['voting_end_time'][:-4], "%Y-%m-%dT%H:%M:%S.%f")
+        voting_start_time = current_proposal.voting_start_time
+        voting_end_time = current_proposal.voting_end_time
 
         text = 'A new governance proposal got submitted! 📣\n\n' + \
-               '*Title:*\n' + current_proposal['content']['value']['title'] + '\n' + \
-               '*Type:*\n' + current_proposal['content']['type'] + '\n' + \
-               '*Description:*\n' + current_proposal['content']['value']['description'] + '\n\n' + \
+               '*Title:*\n' + current_proposal.content.title + '\n' + \
+               '*Type:*\n' + current_proposal.content.type + '\n' + \
+               '*Description:*\n' + current_proposal.content.description + '\n\n' + \
                '*Voting Start Time:* ' + voting_start_time.strftime("%A %B %d, %H:%M") + ' UTC\n' + \
                '*Voting End Time:* ' + voting_end_time.strftime("%A %B %d, %H:%M") + ' UTC\n\n' + \
                'Make sure to vote on this governance proposal until *' + voting_end_time.strftime(
@@ -302,3 +306,34 @@ def check_new_goverance_proposal(context):
         send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     user_data['governance_proposals_count'] = governance_proposals_count
+
+
+def check_results_of_proposals(context, governance_proposals):
+    user_data = context.job.context['user_data']
+
+    active_proposals = list(filter(lambda p: p.proposal_status == 'VotingPeriod', governance_proposals))
+    monitored_active_proposals = copy.deepcopy(user_data.setdefault('monitored_active_proposals', []))
+
+    # save new proposals
+    for proposal in active_proposals:
+        if proposal.id not in monitored_active_proposals:
+            user_data['monitored_active_proposals'].append(proposal.id)
+
+    # send notifications
+    for proposal_id in monitored_active_proposals:
+        is_past = proposal_id not in map(lambda p: p.id, active_proposals)
+
+        if is_past:
+            past_proposal = next(filter(lambda p: p.id == proposal_id, governance_proposals), None)
+            user_data['monitored_active_proposals'].remove(proposal_id)
+            results = past_proposal.final_tally_result
+
+            message = "* ‼️ This proposal has ended ‼️*\n\n" \
+                      f"{proposal_to_text(past_proposal)}\n\n" \
+                      "*Results:*\n\n" \
+                      f"*✅ Yes*: {results['yes']}\n" \
+                      f"*❌ No*: {results['no']}\n" \
+                      f"*❌❌ No with veto*: {results['no_with_veto']}\n" \
+                      f"*🤷 Abstain*: {results['abstain']}\n"
+
+            try_message(context=context, chat_id=context.job.context['chat_id'], text=message)

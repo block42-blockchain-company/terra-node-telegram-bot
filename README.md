@@ -9,6 +9,8 @@ Features:
 * Notifications if your **Block Height** gets stuck
 * Notifications if **Price Feed** gets unhealthy
 * Notifications about new **Governance Proposals**
+* Notifications about finished **Governance Proposals**
+* Voting on **Governance Proposals**
 * Notifications on **Slack**
 
 If you have questions please open a [github](https://github.com/block42-blockchain-company/terra-node-telegram-bot/issues) 
@@ -33,6 +35,13 @@ Leave it empty or remove it to only monitor public Node information.
 - `SLACK_WEBHOOK` to the webhook of your Slack channel to receive notifications on [Slack](https://slack.com). 
 Leave it empty or remove it to not get notified via Slack.
 
+Optionally set
+- `MNEMONIC` to your 24-word mnemonic phrase of your wallet you want to vote with
+- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to perform transactions. If you set a mnemonic
+phrase you *MUST* also set at least one allowed user id.
+Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
+
+
 ## [Steps to run everything yourself](#steps-to-run-everything-yourself)
 * [Install dependencies](#install-dependencies)
 * [Create Telegram Bot token](#create-telegram-bot-token-via-botfather) via [BotFather]((https://t.me/BotFather))
@@ -47,6 +56,7 @@ Leave it empty or remove it to not get notified via Slack.
   * [Sign in to the new Telegram Client](#sign-in-to-the-new-telegram-client)
   * [Install Pytest](#install-pytest)
   * [Run the tests](#run-the-tests)
+  * [LocalTerra](#local-terra)
 
 ## [Install dependencies](#install-dependencies)
 Install all required dependencies via: `pip install -r requirements.txt`
@@ -76,6 +86,20 @@ export TELEGRAM_BOT_TOKEN=XXX
 Optionally set the Slack Webhook that you previously created as the environment variable `SLACK_WEBHOOK`:
 ```
 export SLACK_WEBHOOK=https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+```
+---
+---
+- `MNEMONIC` to your 24-word mnemonic phrase of your wallet you want to vote with
+- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to perform transactions. If you set a mnemonic
+phrase you must also set at least one allowed user id.
+Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
+
+
+Optionally set 24-word mnemonic phrase and as `MNEMONIC` and whitelisted users that can perform protected operations
+(like voting) as `ALLOWED_USER_IDS`.
+```
+export ALLOWED_USER_IDS=123,456
+export MNEMONIC=hello world hello world...
 ```
 ---
 Next you can specify the IP of the Terra node that you want to watch in the `NODE_IP` environment variable.
@@ -236,3 +260,13 @@ Finally to run the tests open the `test/` folder in your terminal and run
 pytest -v unit_test.py
 ```
 After all tests finished check that all tests passed.
+
+### <a name="local-terra">LocalTerra</a>
+To test the transaction invoking operations, like voting on proposals, you need to set up LocalTerra environment. 
+To do it you need docker daemon running. When it's ready just type in these commands:
+```
+git clone https://www.github.com/terra-project/LocalTerra
+cd LocalTerra
+docker-compose up
+```
+You can find more info about LocalTerra [here](https://github.com/terra-project/LocalTerra).
