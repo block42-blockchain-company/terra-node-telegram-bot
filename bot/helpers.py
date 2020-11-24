@@ -65,8 +65,16 @@ def get_my_nodes_menu_buttons(user_data):
 
     keyboard = [[]]
 
+    count = 0
     for address in user_data['nodes'].keys():
-        keyboard.append([InlineKeyboardButton("📡 " + address, callback_data='node_details-' + address)])
+        new_button = InlineKeyboardButton("📡 " + address, callback_data='node_details-' + address)
+
+        if count % 2 == 0:
+            keyboard.append([new_button])
+        else:
+            # Add every second entry to the last row so that we have two columns
+            keyboard[len(keyboard)-1].append(new_button)
+        count += 1
 
     keyboard.append([InlineKeyboardButton('1️⃣ ADD NODE', callback_data='add_node')])
     keyboard.append([
