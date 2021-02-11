@@ -9,8 +9,9 @@ from jigu.core.msg import MsgVote
 from jigu.key.mnemonic import MnemonicKey
 from telegram.utils.helpers import escape_markdown
 
-from constants import logger, MNEMONIC, DEBUG
-from messages import NETWORK_ERROR_MSG
+from constants.constants import DEBUG, MNEMONIC
+from constants.messages import NETWORK_ERROR_MSG
+from constants.logger import logger
 
 # TODO: discuss and choose usage of jigu or rest
 if DEBUG:

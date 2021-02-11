@@ -79,6 +79,8 @@ def setup_existing_user(dispatcher):
                 os.remove(session_data_path)
 
 
+
+
 def main():
     """
     Init telegram bot, attach handlers and wait for incoming requests.

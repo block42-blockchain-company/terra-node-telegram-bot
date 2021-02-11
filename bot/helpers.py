@@ -5,8 +5,8 @@ from jigu.core.msg import MsgVote
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 from requests.exceptions import RequestException
 
-from constants import *
-from messages import NETWORK_ERROR_MSG
+from constants.constants import *
+from constants.messages import NETWORK_ERROR_MSG
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
     proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided, BadMnemonicException
 

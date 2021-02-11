@@ -1,6 +1,6 @@
 import copy
 from helpers import *
-from constants import *
+from constants.constants import *
 from service.governance_service import get_governance_proposals, proposal_to_text
 
 """
@@ -92,9 +92,6 @@ def check_node_status(context):
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
 
-    # Flag to show home buttons or not
-    message_sent = False
-
     # List to delete entries after loop
     delete_addresses = []
 
@@ -116,7 +113,6 @@ def check_node_status(context):
 
             # Send message
             send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-            message_sent = True
             continue
 
         # Check which node fields have changed
@@ -145,7 +141,6 @@ def check_node_status(context):
 
             # Send message
             send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-            message_sent = True
 
     for address in delete_addresses:
         del user_data['nodes'][address]
