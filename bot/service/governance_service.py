@@ -15,16 +15,16 @@ from messages import NETWORK_ERROR_MSG
 # TODO: discuss and choose usage of jigu or rest
 if DEBUG:
     lcd_url = 'http://0.0.0.0:1317/'
-    terra = Terra(None, lcd_url)
 
-    if not terra.is_connected():
-        raise Exception(f"I can't connect to the local Terra API! Is LocalTerra running?")
 else:
     lcd_url = 'https://lcd.terra.dev/'
-    terra = Terra(None, lcd_url)
 
+try:
+    terra = Terra(None, lcd_url)
     if not terra.is_connected():
-        raise Exception(f"I can't connect to the Terra LCD API!")
+        raise Exception()
+except Exception as e:
+    raise Exception(f"I can't connect to the local Terra API! Is LocalTerra running?")
 
 wallet = terra.wallet(MnemonicKey(MNEMONIC)) if MNEMONIC else None
 

@@ -6,6 +6,7 @@ from jobs import *
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
 from message_handlers import start, cancel, dispatch_query, plain_input, log_error
+
 """
 ######################################################################################################################################################
 Debug Processes
@@ -22,10 +23,12 @@ if DEBUG:
     increase_block_height_process = subprocess.Popen(['python3', increase_block_height_path], cwd=test_dir)
     update_local_price_feed = subprocess.Popen(['python3', update_local_price_feed_path], cwd=test_dir)
 
+
     def cleanup():
         mock_api_process.terminate()
         increase_block_height_process.terminate()
         update_local_price_feed.terminate()
+
 
     atexit.register(cleanup)
 """
@@ -87,13 +90,13 @@ def main():
 
     setup_existing_user(dispatcher=dispatcher)
 
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CommandHandler('cancel', cancel))
-    dispatcher.add_handler(CallbackQueryHandler(dispatch_query))
-    dispatcher.add_handler(MessageHandler(Filters.text, plain_input))
+    dispatcher.add_handler(CommandHandler('start', start, run_async=True))
+    dispatcher.add_handler(CommandHandler('cancel', cancel, run_async=True))
+    dispatcher.add_handler(CallbackQueryHandler(dispatch_query, run_async=True))
+    dispatcher.add_handler(MessageHandler(Filters.text, plain_input, run_async=True))
 
     # log all errors
-    dispatcher.add_error_handler(log_error)
+    dispatcher.add_error_handler(log_error, run_async=True)
 
     # Start the bot
     bot.start_polling()
