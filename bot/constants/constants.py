@@ -10,4 +10,3 @@ session_data_path = os.sep.join([storage_path, 'session.data'])
 NODE_STATUSES = ["Unbonded", "Unbonding", "Bonded"]
 
 JOB_INTERVAL_IN_SECONDS = 15
-
