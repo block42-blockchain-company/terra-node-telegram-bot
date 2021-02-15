@@ -1,8 +1,6 @@
-import re
-
-from jobs import *
-
 from telegram.error import BadRequest
+
+from jobs.jobs import *
 
 
 def start(update, context):
@@ -292,4 +290,4 @@ def delete_node(update, context):
 
 
 def log_error(update, context):
-    logger.error(f'There is an unhandled error!\n{context.log_error}\nUpdater: {update}')
+    logger.error(f'There is an unhandled error!\n{context.error}\nUpdater: {update}')

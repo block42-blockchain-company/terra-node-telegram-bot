@@ -1,10 +1,13 @@
 import atexit
 import subprocess
 
-from jobs import *
-
+from telegram import TelegramError
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
+from constants.constants import *
+from constants.messages import TERRA_NODE_TELEGRAM_BOT_HELLO
+from jobs.sentry_jobs import setup_sentry_jobs
+from jobs.jobs import node_checks
 from message_handlers import start, cancel, dispatch_query, plain_input, log_error
 
 """
@@ -79,8 +82,6 @@ def setup_existing_user(dispatcher):
                 os.remove(session_data_path)
 
 
-
-
 def main():
     """
     Init telegram bot, attach handlers and wait for incoming requests.
@@ -91,6 +92,7 @@ def main():
     dispatcher = bot.dispatcher
 
     setup_existing_user(dispatcher=dispatcher)
+    setup_sentry_jobs(dispatcher=dispatcher)
 
     dispatcher.add_handler(CommandHandler('start', start, run_async=True))
     dispatcher.add_handler(CommandHandler('cancel', cancel, run_async=True))
@@ -102,8 +104,20 @@ def main():
 
     # Start the bot
     bot.start_polling()
-    logger.info('Terra Node Bot is running ...')
-
+    logger.info(TERRA_NODE_TELEGRAM_BOT_HELLO)
+    logger.info(f"""
+    ==========================================================================
+    ==========================================================================
+    Debug: {DEBUG}
+    Telegram bot token: {"SET" if TELEGRAM_BOT_TOKEN else "MISSING!"}
+    Slack webhook: {SLACK_WEBHOOK}
+    LCD endpoint: {LCD_ENDPOINT}
+    Sentry nodes: {SENTRY_NODES}
+    Node IP: {NODE_IP}
+    MNEMONIC: {"SET" if MNEMONIC else "NOT SET"}
+    ==========================================================================
+    ==========================================================================
+    """)
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.

@@ -73,7 +73,7 @@ def get_my_nodes_menu_buttons(user_data):
             keyboard.append([new_button])
         else:
             # Add every second entry to the last row so that we have two columns
-            keyboard[len(keyboard)-1].append(new_button)
+            keyboard[len(keyboard) - 1].append(new_button)
         count += 1
 
     keyboard.append([InlineKeyboardButton('1️⃣ ADD NODE', callback_data='add_node')])
@@ -250,9 +250,14 @@ def show_confirmation_menu(update, text, keyboard):
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-def send_message_to_all_platforms(context, chat_id, text):
+def try_message_to_all_platforms(context, chat_id, text):
     try_message_with_home_menu(context=context, chat_id=chat_id, text=text)
     send_slack_message(text)
+
+
+def try_message_to_all_chats_and_platforms(context, text):
+    for chat_id in context.dispatcher.chat_data.keys():
+        try_message_with_home_menu(context, chat_id=chat_id, text=text)
 
 
 def send_slack_message(text):
@@ -267,9 +272,6 @@ def try_message(context, chat_id, text, reply_markup=None):
     """
     Send a message to a user.
     """
-
-    if context.job and not context.job.enabled:
-        return
 
     try:
         context.bot.send_message(chat_id, text, parse_mode='markdown', reply_markup=reply_markup)
@@ -286,7 +288,6 @@ def try_message(context, chat_id, text, reply_markup=None):
             if len(context.dispatcher.persistence.user_data) == 0:
                 if os.path.exists("./storage/session.data"):
                     os.remove("./storage/session.data")
-            context.job.enabled = False
             context.job.schedule_removal()
         else:
             print("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
