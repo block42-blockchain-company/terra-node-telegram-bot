@@ -10,6 +10,7 @@ Features:
 * Notifications if **Price Feed** gets unhealthy
 * Notifications about new **Governance Proposals**
 * Notifications about finished **Governance Proposals**
+* Notifications about syncing status changes of your **sentry nodes**
 * Voting on **Governance Proposals**
 * Notifications on **Slack**
 
@@ -42,6 +43,7 @@ Optionally set
 - `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to perform transactions. If you set a mnemonic
 phrase you *MUST* also set at least one allowed user id.
 Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
+- `SENTRY_NODES` comma separated list of your sentry nodes' LCD URLs if you want to monitor their sync status.
 
 
 ## [Steps to run everything yourself](#steps-to-run-everything-yourself)
@@ -112,6 +114,13 @@ export ALLOWED_USER_IDS=123,456
 export MNEMONIC=hello world hello world...
 ```
 ---
+- `SENTRY_NODES` comma separated list of your sentry nodes' LCD URLs if you want to monitor their sync status.
+```
+export SENTRY_NODES=localhost:1317,192.168.5.4:1317
+```
+---
+
+
 Next you can specify the IP of the Terra node that you want to watch in the `NODE_IP` environment variable.
 
 Set it to `localhost` to listen a node on your own machine.
