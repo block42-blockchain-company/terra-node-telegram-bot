@@ -277,7 +277,7 @@ def try_message(context, chat_id, text, reply_markup=None):
         context.bot.send_message(chat_id, text, parse_mode='markdown', reply_markup=reply_markup)
     except TelegramError as e:
         if 'bot was blocked by the user' in e.message:
-            print("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
+            logger.info("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
             del context.dispatcher.user_data[chat_id]
             del context.dispatcher.chat_data[chat_id]
             del context.dispatcher.persistence.user_data[chat_id]
@@ -290,7 +290,7 @@ def try_message(context, chat_id, text, reply_markup=None):
                     os.remove("./storage/session.data")
             context.job.schedule_removal()
         else:
-            print("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
+            logger.info("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
 
 
 def add_node_to_user_data(user_data, address, node):
