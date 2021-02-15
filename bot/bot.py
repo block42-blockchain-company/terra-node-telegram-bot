@@ -5,7 +5,7 @@ from telegram import TelegramError
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
 from constants.constants import *
-from constants.messages import TERRA_NODE_TELEGRAM_BOT_HELLO
+from constants.messages import BOT_STARTUP_LOG, BOT_RESTARTED
 from jobs.sentry_jobs import setup_sentry_jobs
 from jobs.jobs import node_checks
 from message_handlers import start, cancel, dispatch_query, plain_input, log_error
@@ -49,12 +49,8 @@ def setup_existing_user(dispatcher):
     chat_ids = dispatcher.user_data.keys()
     delete_chat_ids = []
     for chat_id in chat_ids:
-        restart_message = 'Hello there!\n' \
-                          'Me, your Node Bot of Terra, just got restarted on the server! 🤖\n' \
-                          'To make sure you have the latest features, please start ' \
-                          'a fresh chat with me by typing /start.'
         try:
-            dispatcher.bot.send_message(chat_id, restart_message)
+            dispatcher.bot.send_message(chat_id, BOT_RESTARTED)
             dispatcher.job_queue.run_repeating(node_checks,
                                                interval=JOB_INTERVAL_IN_SECONDS,
                                                context={
@@ -66,10 +62,10 @@ def setup_existing_user(dispatcher):
                 delete_chat_ids.append(chat_id)
                 continue
             else:
-                print("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
+                logger.error("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
 
     for chat_id in delete_chat_ids:
-        print("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
+        logger.info("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
         del dispatcher.user_data[chat_id]
         del dispatcher.chat_data[chat_id]
         del dispatcher.persistence.user_data[chat_id]
@@ -104,7 +100,7 @@ def main():
 
     # Start the bot
     bot.start_polling()
-    logger.info(TERRA_NODE_TELEGRAM_BOT_HELLO)
+    logger.info(BOT_STARTUP_LOG)
     logger.info(f"""
     ==========================================================================
     ==========================================================================

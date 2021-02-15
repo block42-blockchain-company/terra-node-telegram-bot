@@ -1,5 +1,6 @@
 from telegram.error import BadRequest
 
+from constants.messages import HELLO_MESSAGE
 from jobs.jobs import *
 
 
@@ -21,11 +22,7 @@ def start(update, context):
         context.user_data['job_started'] = True
         context.user_data['nodes'] = {}
 
-    text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
-           'I will notify you about changes of your node\'s *Jailed*, *Unbonded* or *Delegator Shares*, ' \
-           'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
-           'Moreover, I will notify you about finished and new *governance proposals*. ' \
-           'You can also directly *vote* on them!'
+    text = HELLO_MESSAGE
 
     # Send message
     try_message_with_home_menu(context=context, chat_id=update.effective_chat.id, text=text)
