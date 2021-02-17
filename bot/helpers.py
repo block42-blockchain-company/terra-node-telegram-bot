@@ -10,12 +10,6 @@ from constants.messages import NETWORK_ERROR_MSG
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
     proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided, BadMnemonicException
 
-"""
-######################################################################################################################################################
-Helpers
-######################################################################################################################################################
-"""
-
 
 def try_message_with_home_menu(context, chat_id, text):
     keyboard = get_home_menu_buttons()
@@ -36,7 +30,8 @@ def show_my_nodes_menu_new_msg(context, chat_id):
     text = 'Click an address from the list below or add a node:' if len(keyboard) > 2 else 'You do not monitor any ' \
                                                                                            'Terra Nodes yet.\nAdd a Node!'
 
-    try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+    try_message(context=context, chat_id=chat_id, text=text,
+                reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 def show_governance_menu(context, chat_id):
@@ -45,7 +40,8 @@ def show_governance_menu(context, chat_id):
     keyboard = [[InlineKeyboardButton("🗳 Show all proposals", callback_data='governance_all')],
                 [InlineKeyboardButton("🗳 ✅ Show active proposals and vote", callback_data='governance_active')]]
 
-    try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+    try_message(context=context, chat_id=chat_id, text=text,
+                reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 def get_home_menu_buttons():
@@ -126,7 +122,8 @@ def on_show_active_proposals_clicked(update, context):
         active_proposals = get_active_proposals()
     except Exception as e:
         logger.error(e, exc_info=True)
-        try_message(context=context, chat_id=query['message']['chat']['id'], text=NETWORK_ERROR_MSG)
+        try_message(context=context, chat_id=query['message']['chat']['id'],
+                    text=NETWORK_ERROR_MSG)
         return
 
     text = '🗳 ✅ **Active proposals**🗳 ✅ \n' \
@@ -277,7 +274,7 @@ def try_message(context, chat_id, text, reply_markup=None):
         context.bot.send_message(chat_id, text, parse_mode='markdown', reply_markup=reply_markup)
     except TelegramError as e:
         if 'bot was blocked by the user' in e.message:
-            logger.info("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
+            logger.info(f"Telegram user {chat_id} blocked me, removing him from the user list")
             del context.dispatcher.user_data[chat_id]
             del context.dispatcher.chat_data[chat_id]
             del context.dispatcher.persistence.user_data[chat_id]
@@ -286,9 +283,12 @@ def try_message(context, chat_id, text, reply_markup=None):
             # Somehow session.data does not get updated if all users block the bot.
             # That makes problems on bot restart. That's why we delete the file ourselves.
             if len(context.dispatcher.persistence.user_data) == 0:
-                if os.path.exists("./storage/session.data"):
+                try:
                     os.remove("./storage/session.data")
-            context.job.schedule_removal()
+                except OSError:
+                    pass
+
+            # context.job.schedule_removal()
         else:
             logger.info("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
 

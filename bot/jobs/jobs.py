@@ -1,30 +1,168 @@
 import copy
+from typing import Callable
+
+from telegram.ext import CallbackContext
+
 from helpers import *
 from constants.constants import *
 from service.governance_service import get_governance_proposals, proposal_to_text
 
-"""
-######################################################################################################################################################
-Jobs
-######################################################################################################################################################
-"""
+
+def setup_node_jobs(dispatcher):
+    # dispatcher.job_queue.run_repeating(check_lcd_reachable,
+    #                                    interval=NODE_JOBS_IN  TERVAL_IN_SECONDS,
+    #                                    context={'user_data': dispatcher.user_data})
+
+    # dispatcher.job_queue.run_repeating(check_node_status_job,
+    #                                    interval=NODE_JOBS_INTERVAL_IN_SECONDS,
+    #                                    context={'user_data': dispatcher.user_data})
+
+    dispatcher.job_queue.run_repeating(check_price_feeder_job,
+                                       interval=NODE_JOBS_INTERVAL_IN_SECONDS,
+                                       context={'user_data': dispatcher.user_data})
+
+
+def check_lcd_reachable(context):
+    user_data = context.job.context['user_data']
+    message = None
+
+    if 'is_lcd_reachable' not in user_data:
+        user_data['is_lcd_reachable'] = True
+
+    is_lcd_currently_reachable = is_lcd_reachable()
+
+    if user_data['is_lcd_reachable'] == True and not is_lcd_currently_reachable:
+        user_data['is_lcd_reachable'] = False
+        message = 'The public Lite Client Daemon (LCD) cannot be reached! 💀' + '\n' + \
+                  'Node monitoring will be restricted to node specific attributes until it is reachable again.'
+    elif user_data['is_lcd_reachable'] == False and is_lcd_currently_reachable:
+        user_data['is_lcd_reachable'] = True
+        message = 'The public Lite Client Daemon (LCD) is reachable again! 👌' + '\n' + \
+                  'Monitoring of publicly available node attributes resumes.'
+
+    if message is not None:
+        try_message_to_all_chats_and_platforms(context, message)
+
+
+# todo: test me!
+def check_node_status_job(context):
+    for_each_user(context, check_node_status)
+
+
+def check_node_status(user_id, user_data, context):
+    delete_addresses = []
+
+    # Iterate through all keys
+    for address in user_data.get('nodes', {}).keys():
+
+        try:
+            remote_node = get_validator(address=address)
+        except ConnectionError:
+            continue
+
+        local_node = user_data['nodes'][address]
+
+        if remote_node is None:
+            text = 'Node is not active anymore! 💀' + '\n' + \
+                   'Address: ' + address + '\n\n' + \
+                   'Please enter another Node address.'
+
+            delete_addresses.append(address)
+
+            # Send message
+            try_message_to_all_platforms(context=context, chat_id=user_id, text=text)
+            continue
+
+        # Check which node fields have changed
+        changed_fields = [
+            field for field in ['status', 'jailed', 'delegator_shares'] if local_node[field] != remote_node[field]
+        ]
+
+        # Check if there are any changes
+        if len(changed_fields) > 0:
+            text = 'Node: *' + address + '*\n' + \
+                   'Status: *' + NODE_STATUSES[local_node['status']]
+            if 'status' in changed_fields:
+                text += '* ➡️ *' + NODE_STATUSES[remote_node['status']]
+            text += '*\nJailed: *' + str(local_node['jailed'])
+            if 'jailed' in changed_fields:
+                text += '* ➡️ *' + str(remote_node['jailed'])
+            text += '*\nDelegator Shares: *' + str(int(float(local_node['delegator_shares'])))
+            if 'delegator_shares' in changed_fields:
+                text += '* ➡️ *' + str(int(float(remote_node['delegator_shares'])))
+            text += '*'
+
+            # Update data
+            local_node['status'] = remote_node['status']
+            local_node['jailed'] = remote_node['jailed']
+            local_node['delegator_shares'] = remote_node['delegator_shares']
+
+            # Send message
+            try_message_to_all_platforms(context=context, chat_id=user_id, text=text)
+
+    for address in delete_addresses:
+        del context.job.context['user_data'][user_id]['nodes'][address]
+
+
+def check_price_feeder_job(context):
+    for_each_user(context, check_price_feeder)
+
+
+def check_price_feeder(user_id, user_data, context):
+    """
+    Check Prevotes to make sure Price Feeder still works
+    """
+
+    for address in user_data.get('nodes', {}).keys():
+        if 'is_price_feed_healthy' not in user_data:
+            user_data['is_price_feed_healthy'] = True
+
+        text = None
+
+        try:
+            is_price_feed_currently_healthy = is_price_feed_healthy(address)
+        except ConnectionError:
+            continue
+
+        if user_data['is_price_feed_healthy'] == True and not is_price_feed_currently_healthy:
+            user_data['is_price_feed_healthy'] = False
+            text = 'Price feed is not healthy anymore! 💀' + '\n' + \
+                   'Address: ' + address
+        elif user_data['is_price_feed_healthy'] == False and is_price_feed_currently_healthy:
+            user_data['is_price_feed_healthy'] = True
+            text = 'Price feed is healthy again! 👌' + '\n' + \
+                   'Address: ' + address + '\n'
+
+        context.job.context['user_data'][user_id]['is_price_feed_healthy'] = is_price_feed_currently_healthy
+        if text is not None:
+            try_message_to_all_platforms(context=context, chat_id=user_id, text=text)
+
+
+# TODO: make it async with asyncio
+# TODO: When adding group support - there won't be repeated checks
+def for_each_user(context: CallbackContext, callback: Callable):
+    users_id_to_data = copy.deepcopy(context.job.context['user_data']).items()
+    for user_id, user_data in users_id_to_data:
+        callback(user_id, user_data, context)
 
 
 def node_checks(context):
     """
     Periodic checks of various node stats
     """
+    return
+    # fixme
 
-    if check_lcd_reachable(context):
-        check_node_status(context)
-        check_price_feeder(context)
-        check_governance_proposals(context)
-    if NODE_IP and check_node_reachable(context):
-        check_node_catch_up_status(context)
-        check_node_block_height(context)
+    # if lcd_reachable_job(context):
+    #     check_node_status(context)
+    #     check_price_feeder(context)
+    #     check_governance_proposals(context)
+    # if NODE_IP and check_node_reachable(context):
+    #     check_node_catch_up_status(context)
+    #     check_node_block_height(context)
 
 
-def check_lcd_reachable(context):
+def is_lcd_reachable(context):
     """
     Returns whether the public Lite Client Daemon (LCD) is reachable and informs user
     """
@@ -82,97 +220,6 @@ def check_node_reachable(context):
         try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     return is_node_currently_reachable
-
-
-def check_node_status(context):
-    """
-    Check all added Terra Nodes for any changes.
-    """
-
-    chat_id = context.job.context['chat_id']
-    user_data = context.job.context['user_data']
-
-    # List to delete entries after loop
-    delete_addresses = []
-
-    # Iterate through all keys
-    for address in user_data.get('nodes', {}).keys():
-        try:
-            remote_node = get_validator(address=address)
-        except ConnectionError:
-            continue
-
-        local_node = user_data['nodes'][address]
-
-        if remote_node is None:
-            text = 'Node is not active anymore! 💀' + '\n' + \
-                   'Address: ' + address + '\n\n' + \
-                   'Please enter another Node address.'
-
-            delete_addresses.append(address)
-
-            # Send message
-            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-            continue
-
-        # Check which node fields have changed
-        changed_fields = [
-            field for field in ['status', 'jailed', 'delegator_shares'] if local_node[field] != remote_node[field]
-        ]
-
-        # Check if there are any changes
-        if len(changed_fields) > 0:
-            text = 'Node: *' + address + '*\n' + \
-                   'Status: *' + NODE_STATUSES[local_node['status']]
-            if 'status' in changed_fields:
-                text += '* ➡️ *' + NODE_STATUSES[remote_node['status']]
-            text += '*\nJailed: *' + str(local_node['jailed'])
-            if 'jailed' in changed_fields:
-                text += '* ➡️ *' + str(remote_node['jailed'])
-            text += '*\nDelegator Shares: *' + str(int(float(local_node['delegator_shares'])))
-            if 'delegator_shares' in changed_fields:
-                text += '* ➡️ *' + str(int(float(remote_node['delegator_shares'])))
-            text += '*'
-
-            # Update data
-            local_node['status'] = remote_node['status']
-            local_node['jailed'] = remote_node['jailed']
-            local_node['delegator_shares'] = remote_node['delegator_shares']
-
-            # Send message
-            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-
-    for address in delete_addresses:
-        del user_data['nodes'][address]
-
-
-def check_price_feeder(context):
-    """
-    Check Prevotes to make sure Price Feeder still works
-    """
-
-    chat_id = context.job.context['chat_id']
-    user_data = context.job.context['user_data']
-
-    for address in user_data.get('nodes', {}).keys():
-        if 'is_price_feed_healthy' not in user_data:
-            user_data['is_price_feed_healthy'] = True
-
-        try:
-            is_price_feed_currently_healthy = is_price_feed_healthy(address)
-        except ConnectionError:
-            continue
-
-        if user_data['is_price_feed_healthy'] == True and not is_price_feed_currently_healthy:
-            user_data['is_price_feed_healthy'] = False
-            text = 'Price feed is not healthy anymore! 💀' + '\n' + \
-                   'Address: ' + address
-            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-        elif user_data['is_price_feed_healthy'] == False and is_price_feed_currently_healthy:
-            user_data['is_price_feed_healthy'] = True
-            text = 'Price feed is healthy again! 👌' + '\n' + \
-                   'Address: ' + address + '\n'
-            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
 
 def check_node_catch_up_status(context):

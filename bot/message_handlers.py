@@ -1,4 +1,4 @@
-from telegram.error import BadRequest
+from telegram.error import BadRequest, Unauthorized
 
 from constants.messages import HELLO_MESSAGE
 from jobs.jobs import *
@@ -14,7 +14,7 @@ def start(update, context):
     # Start job for user
     if 'job_started' not in context.user_data:
         context.job_queue.run_repeating(node_checks,
-                                        interval=JOB_INTERVAL_IN_SECONDS,
+                                        interval=NODE_JOBS_INTERVAL_IN_SECONDS,
                                         context={
                                             'chat_id': update.message.chat.id,
                                             'user_data': context.user_data
@@ -22,10 +22,8 @@ def start(update, context):
         context.user_data['job_started'] = True
         context.user_data['nodes'] = {}
 
-    text = HELLO_MESSAGE
-
     # Send message
-    try_message_with_home_menu(context=context, chat_id=update.effective_chat.id, text=text)
+    try_message_with_home_menu(context=context, chat_id=update.effective_chat.id, text=HELLO_MESSAGE)
 
 
 def cancel(update, context):
@@ -286,5 +284,12 @@ def delete_node(update, context):
     show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
 
-def log_error(update, context):
+def global_error_handler(update, context):
+    if context.error is TelegramError and 'bot was blocked by the user' in context.error.message:
+        logger.info("Bot blocked me!!!!!!!!!!")
+
+    if isinstance(context.error, Unauthorized):
+        logger.info("Bot blocked me!!!!!!!!!!")
+
+
     logger.error(f'There is an unhandled error!\n{context.error}\nUpdater: {update}')

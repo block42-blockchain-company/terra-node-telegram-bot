@@ -7,8 +7,8 @@ from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQue
 from constants.constants import *
 from constants.messages import BOT_STARTUP_LOG, BOT_RESTARTED
 from jobs.sentry_jobs import setup_sentry_jobs
-from jobs.jobs import node_checks
-from message_handlers import start, cancel, dispatch_query, plain_input, log_error
+from jobs.jobs import node_checks, setup_node_jobs
+from message_handlers import start, cancel, dispatch_query, plain_input, global_error_handler
 
 """
 ######################################################################################################################################################
@@ -19,7 +19,8 @@ Debug Processes
 if DEBUG:
     current_dir = os.path.dirname(os.path.realpath(__file__))
     test_dir = os.sep.join([current_dir, os.path.pardir, "test"])
-    mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd=test_dir)
+    mock_api_process = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--bind', '127.0.0.1'], cwd=test_dir,
+                                        stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
     increase_block_height_path = os.sep.join([test_dir, "increase_block_height.py"])
     update_local_price_feed_path = os.sep.join([test_dir, "update_price_feed.py"])
 
@@ -52,7 +53,7 @@ def setup_existing_user(dispatcher):
         try:
             dispatcher.bot.send_message(chat_id, BOT_RESTARTED)
             dispatcher.job_queue.run_repeating(node_checks,
-                                               interval=JOB_INTERVAL_IN_SECONDS,
+                                               interval=NODE_JOBS_INTERVAL_IN_SECONDS,
                                                context={
                                                    'chat_id': chat_id,
                                                    'user_data': dispatcher.user_data[chat_id]
@@ -88,6 +89,7 @@ def main():
     dispatcher = bot.dispatcher
 
     setup_existing_user(dispatcher=dispatcher)
+    setup_node_jobs(dispatcher=dispatcher)
     setup_sentry_jobs(dispatcher=dispatcher)
 
     dispatcher.add_handler(CommandHandler('start', start, run_async=True))
@@ -96,7 +98,7 @@ def main():
     dispatcher.add_handler(MessageHandler(Filters.text, plain_input, run_async=True))
 
     # log all errors
-    dispatcher.add_error_handler(log_error, run_async=True)
+    dispatcher.add_error_handler(global_error_handler, run_async=True)
 
     # Start the bot
     bot.start_polling()

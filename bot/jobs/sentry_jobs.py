@@ -1,3 +1,5 @@
+from enum import Enum
+
 from constants.constants import SENTRY_JOB_INTERVAL_IN_SECONDS
 from constants.env_variables import SENTRY_NODES
 from constants.messages import NODE_STARTED_SYNCING, NODE_FINISHED_SYNCING
@@ -18,6 +20,32 @@ def check_sentry_nodes_statuses(context):
         message = check_sentry_node_status(node_ip, sentry_nodes_data)
         if message is not None:
             try_message_to_all_chats_and_platforms(context, message)
+
+
+class StateChange(Enum):
+    CHANGED_TO_TRUE = 1
+    CHANGED_TO_FALSE = 2
+    NO_CHANGE = 3
+
+
+def check_variable_change(get_old_variable, get_new_variable, set_old_variable):
+    try:
+        new_variable = get_new_variable()
+    except Exception as e:
+        logger.error(e)
+        return None
+
+    old_variable = get_old_variable()
+
+    if new_variable != old_variable:
+        set_old_variable(new_variable)
+
+        if new_variable:
+            return StateChange.CHANGED_TO_TRUE
+        else:
+            return StateChange.CHANGED_TO_FALSE
+    else:
+        return None
 
 
 def check_sentry_node_status(node_ip, sentry_nodes_data) -> [None, str]:
