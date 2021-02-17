@@ -17,12 +17,13 @@ Helpers
 """
 
 
-def try_message_with_home_menu(context, chat_id, text):
+def try_message_with_home_menu(context, chat_id, text, remove_job_when_blocked=True):
     keyboard = get_home_menu_buttons()
     try_message(context=context,
                 chat_id=chat_id,
                 text=text,
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                remove_job_when_blocked=remove_job_when_blocked)
 
 
 def show_my_nodes_menu_new_msg(context, chat_id):
@@ -255,9 +256,9 @@ def try_message_to_all_platforms(context, chat_id, text):
     send_slack_message(text)
 
 
-def try_message_to_all_chats_and_platforms(context, text):
+def try_message_to_all_chats_and_platforms(context, text, remove_job_when_blocked=True):
     for chat_id in context.dispatcher.chat_data.keys():
-        try_message_with_home_menu(context, chat_id=chat_id, text=text)
+        try_message_with_home_menu(context, chat_id=chat_id, text=text, remove_job_when_blocked=remove_job_when_blocked)
 
 
 def send_slack_message(text):
@@ -268,7 +269,7 @@ def send_slack_message(text):
             logger.error(f"Slack Webhook post request failed with:\n{e}")
 
 
-def try_message(context, chat_id, text, reply_markup=None):
+def try_message(context, chat_id, text, reply_markup=None, remove_job_when_blocked=True):
     """
     Send a message to a user.
     """
@@ -288,7 +289,9 @@ def try_message(context, chat_id, text, reply_markup=None):
             if len(context.dispatcher.persistence.user_data) == 0:
                 if os.path.exists("./storage/session.data"):
                     os.remove("./storage/session.data")
-            context.job.schedule_removal()
+
+            if remove_job_when_blocked:
+                context.job.schedule_removal()
         else:
             logger.info("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
 

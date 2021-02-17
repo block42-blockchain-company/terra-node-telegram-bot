@@ -17,7 +17,7 @@ def check_sentry_nodes_statuses(context):
     for node_ip in SENTRY_NODES:
         message = check_sentry_node_status(node_ip, sentry_nodes_data)
         if message is not None:
-            try_message_to_all_chats_and_platforms(context, message)
+            try_message_to_all_chats_and_platforms(context, message, remove_job_when_blocked=False)
 
 
 def check_sentry_node_status(node_ip, sentry_nodes_data) -> [None, str]:
