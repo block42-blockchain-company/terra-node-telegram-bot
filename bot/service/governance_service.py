@@ -13,7 +13,7 @@ from constants.constants import DEBUG, MNEMONIC
 from constants.messages import NETWORK_ERROR_MSG
 from constants.logger import logger
 
-# TODO: discuss and choose usage of jigu or rest
+# TODO: migrate to new Terra python SDK
 if DEBUG:
     lcd_url = 'http://0.0.0.0:1317/'
 
