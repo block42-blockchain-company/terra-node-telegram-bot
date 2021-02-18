@@ -5,8 +5,8 @@ from jigu.core.msg import MsgVote
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 from requests.exceptions import RequestException
 
-from constants import *
-from messages import NETWORK_ERROR_MSG
+from constants.constants import *
+from constants.messages import NETWORK_ERROR_MSG
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
     proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided, BadMnemonicException
 
@@ -17,12 +17,13 @@ Helpers
 """
 
 
-def try_message_with_home_menu(context, chat_id, text):
+def try_message_with_home_menu(context, chat_id, text, remove_job_when_blocked=True):
     keyboard = get_home_menu_buttons()
     try_message(context=context,
                 chat_id=chat_id,
                 text=text,
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                remove_job_when_blocked=remove_job_when_blocked)
 
 
 def show_my_nodes_menu_new_msg(context, chat_id):
@@ -73,7 +74,7 @@ def get_my_nodes_menu_buttons(user_data):
             keyboard.append([new_button])
         else:
             # Add every second entry to the last row so that we have two columns
-            keyboard[len(keyboard)-1].append(new_button)
+            keyboard[len(keyboard) - 1].append(new_button)
         count += 1
 
     keyboard.append([InlineKeyboardButton('1️⃣ ADD NODE', callback_data='add_node')])
@@ -250,9 +251,14 @@ def show_confirmation_menu(update, text, keyboard):
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-def send_message_to_all_platforms(context, chat_id, text):
+def try_message_to_all_platforms(context, chat_id, text):
     try_message_with_home_menu(context=context, chat_id=chat_id, text=text)
     send_slack_message(text)
+
+
+def try_message_to_all_chats_and_platforms(context, text, remove_job_when_blocked=True):
+    for chat_id in context.dispatcher.chat_data.keys():
+        try_message_with_home_menu(context, chat_id=chat_id, text=text, remove_job_when_blocked=remove_job_when_blocked)
 
 
 def send_slack_message(text):
@@ -263,19 +269,16 @@ def send_slack_message(text):
             logger.error(f"Slack Webhook post request failed with:\n{e}")
 
 
-def try_message(context, chat_id, text, reply_markup=None):
+def try_message(context, chat_id, text, reply_markup=None, remove_job_when_blocked=True):
     """
     Send a message to a user.
     """
-
-    if context.job and not context.job.enabled:
-        return
 
     try:
         context.bot.send_message(chat_id, text, parse_mode='markdown', reply_markup=reply_markup)
     except TelegramError as e:
         if 'bot was blocked by the user' in e.message:
-            print("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
+            logger.info("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
             del context.dispatcher.user_data[chat_id]
             del context.dispatcher.chat_data[chat_id]
             del context.dispatcher.persistence.user_data[chat_id]
@@ -286,10 +289,11 @@ def try_message(context, chat_id, text, reply_markup=None):
             if len(context.dispatcher.persistence.user_data) == 0:
                 if os.path.exists("./storage/session.data"):
                     os.remove("./storage/session.data")
-            context.job.enabled = False
-            context.job.schedule_removal()
+
+            if remove_job_when_blocked:
+                context.job.schedule_removal()
         else:
-            print("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
+            logger.info("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
 
 
 def add_node_to_user_data(user_data, address, node):

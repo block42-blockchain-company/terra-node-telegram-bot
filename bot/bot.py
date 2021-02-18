@@ -1,11 +1,15 @@
 import atexit
 import subprocess
 
-from jobs import *
-
+from telegram import TelegramError
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
+from constants.constants import *
+from constants.messages import BOT_STARTUP_LOG, BOT_RESTARTED
+from jobs.sentry_jobs import setup_sentry_jobs
+from jobs.jobs import node_checks
 from message_handlers import start, cancel, dispatch_query, plain_input, log_error
+
 """
 ######################################################################################################################################################
 Debug Processes
@@ -22,10 +26,12 @@ if DEBUG:
     increase_block_height_process = subprocess.Popen(['python3', increase_block_height_path], cwd=test_dir)
     update_local_price_feed = subprocess.Popen(['python3', update_local_price_feed_path], cwd=test_dir)
 
+
     def cleanup():
         mock_api_process.terminate()
         increase_block_height_process.terminate()
         update_local_price_feed.terminate()
+
 
     atexit.register(cleanup)
 """
@@ -43,12 +49,8 @@ def setup_existing_user(dispatcher):
     chat_ids = dispatcher.user_data.keys()
     delete_chat_ids = []
     for chat_id in chat_ids:
-        restart_message = 'Hello there!\n' \
-                          'Me, your Node Bot of Terra, just got restarted on the server! 🤖\n' \
-                          'To make sure you have the latest features, please start ' \
-                          'a fresh chat with me by typing /start.'
         try:
-            dispatcher.bot.send_message(chat_id, restart_message)
+            dispatcher.bot.send_message(chat_id, BOT_RESTARTED)
             dispatcher.job_queue.run_repeating(node_checks,
                                                interval=JOB_INTERVAL_IN_SECONDS,
                                                context={
@@ -60,10 +62,10 @@ def setup_existing_user(dispatcher):
                 delete_chat_ids.append(chat_id)
                 continue
             else:
-                print("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
+                logger.error("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
 
     for chat_id in delete_chat_ids:
-        print("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
+        logger.info("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
         del dispatcher.user_data[chat_id]
         del dispatcher.chat_data[chat_id]
         del dispatcher.persistence.user_data[chat_id]
@@ -86,19 +88,32 @@ def main():
     dispatcher = bot.dispatcher
 
     setup_existing_user(dispatcher=dispatcher)
+    setup_sentry_jobs(dispatcher=dispatcher)
 
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CommandHandler('cancel', cancel))
-    dispatcher.add_handler(CallbackQueryHandler(dispatch_query))
-    dispatcher.add_handler(MessageHandler(Filters.text, plain_input))
+    dispatcher.add_handler(CommandHandler('start', start, run_async=True))
+    dispatcher.add_handler(CommandHandler('cancel', cancel, run_async=True))
+    dispatcher.add_handler(CallbackQueryHandler(dispatch_query, run_async=True))
+    dispatcher.add_handler(MessageHandler(Filters.text, plain_input, run_async=True))
 
     # log all errors
-    dispatcher.add_error_handler(log_error)
+    dispatcher.add_error_handler(log_error, run_async=True)
 
     # Start the bot
     bot.start_polling()
-    logger.info('Terra Node Bot is running ...')
-
+    logger.info(BOT_STARTUP_LOG)
+    logger.info(f"""
+    ==========================================================================
+    ==========================================================================
+    Debug: {DEBUG}
+    Telegram bot token: {"SET" if TELEGRAM_BOT_TOKEN else "MISSING!"}
+    Slack webhook: {SLACK_WEBHOOK}
+    LCD endpoint: {LCD_ENDPOINT}
+    Sentry nodes: {SENTRY_NODES}
+    Node IP: {NODE_IP}
+    MNEMONIC: {"SET" if MNEMONIC else "NOT SET"}
+    ==========================================================================
+    ==========================================================================
+    """)
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.

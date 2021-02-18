@@ -9,22 +9,23 @@ from jigu.core.msg import MsgVote
 from jigu.key.mnemonic import MnemonicKey
 from telegram.utils.helpers import escape_markdown
 
-from constants import logger, MNEMONIC, DEBUG
-from messages import NETWORK_ERROR_MSG
+from constants.constants import DEBUG, MNEMONIC
+from constants.messages import NETWORK_ERROR_MSG
+from constants.logger import logger
 
-# TODO: discuss and choose usage of jigu or rest
+# TODO: migrate to new Terra python SDK
 if DEBUG:
     lcd_url = 'http://0.0.0.0:1317/'
-    terra = Terra(None, lcd_url)
 
-    if not terra.is_connected():
-        raise Exception(f"I can't connect to the local Terra API! Is LocalTerra running?")
 else:
     lcd_url = 'https://lcd.terra.dev/'
-    terra = Terra(None, lcd_url)
 
+try:
+    terra = Terra(None, lcd_url)
     if not terra.is_connected():
-        raise Exception(f"I can't connect to the Terra LCD API!")
+        raise Exception()
+except Exception as e:
+    raise Exception(f"I can't connect to the local Terra API! Is LocalTerra running?")
 
 wallet = terra.wallet(MnemonicKey(MNEMONIC)) if MNEMONIC else None
 

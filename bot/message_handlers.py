@@ -1,12 +1,9 @@
-import re
-
-from jobs import *
-
 from telegram.error import BadRequest
-from telegram.ext import run_async
+
+from constants.messages import HELLO_MESSAGE
+from jobs.jobs import *
 
 
-@run_async
 def start(update, context):
     """
     Send start message and display action buttons.
@@ -25,17 +22,12 @@ def start(update, context):
         context.user_data['job_started'] = True
         context.user_data['nodes'] = {}
 
-    text = 'Hello there! I am your Node Monitoring Bot of the Terra network. 🤖\n' \
-           'I will notify you about changes of your node\'s *Jailed*, *Unbonded* or *Delegator Shares*, ' \
-           'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
-           'Moreover, I will notify you about finished and new *governance proposals*. ' \
-           'You can also directly *vote* on them!'
+    text = HELLO_MESSAGE
 
     # Send message
     try_message_with_home_menu(context=context, chat_id=update.effective_chat.id, text=text)
 
 
-@run_async
 def cancel(update, context):
     """
     Go back to home menu
@@ -45,7 +37,6 @@ def cancel(update, context):
     show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
 
-@run_async
 def dispatch_query(update, context):
     query = update.callback_query
     query.answer()
@@ -107,7 +98,6 @@ def dispatch_query(update, context):
         return call(update, context)
 
 
-@run_async
 def plain_input(update, context):
     """
     Handle if the users sends a message
@@ -296,6 +286,5 @@ def delete_node(update, context):
     show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
 
 
-@run_async
 def log_error(update, context):
-    logger.warning('Update "%s" caused error: %s', update, context.log_error)
+    logger.error(f'There is an unhandled error!\n{context.error}\nUpdater: {update}')

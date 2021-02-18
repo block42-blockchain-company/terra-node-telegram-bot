@@ -1,6 +1,6 @@
 import copy
 from helpers import *
-from constants import *
+from constants.constants import *
 from service.governance_service import get_governance_proposals, proposal_to_text
 
 """
@@ -41,12 +41,12 @@ def check_lcd_reachable(context):
         user_data['is_lcd_reachable'] = False
         text = 'The public Lite Client Daemon (LCD) cannot be reached! 💀' + '\n' + \
                'Node monitoring will be restricted to node specific attributes until it is reachable again.'
-        send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+        try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
     elif user_data['is_lcd_reachable'] == False and is_lcd_currently_reachable:
         user_data['is_lcd_reachable'] = True
         text = 'The public Lite Client Daemon (LCD) is reachable again! 👌' + '\n' + \
                'Monitoring of publicly available node attributes resumes.'
-        send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+        try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     return is_lcd_currently_reachable
 
@@ -74,12 +74,12 @@ def check_node_reachable(context):
                'IP: ' + NODE_IP + '\n' + \
                'Node monitoring will be restricted to publicly available node attributes until it is reachable again.' + '\n\n' + \
                'Please check your Terra Node immediately!'
-        send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+        try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
     elif user_data['is_node_reachable'] == False and is_node_currently_reachable:
         user_data['is_node_reachable'] = True
         text = 'The specified Node is reachable again! 👌' + '\n' + \
                'Monitoring of node specific attributes resumes.'
-        send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+        try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     return is_node_currently_reachable
 
@@ -91,9 +91,6 @@ def check_node_status(context):
 
     chat_id = context.job.context['chat_id']
     user_data = context.job.context['user_data']
-
-    # Flag to show home buttons or not
-    message_sent = False
 
     # List to delete entries after loop
     delete_addresses = []
@@ -115,8 +112,7 @@ def check_node_status(context):
             delete_addresses.append(address)
 
             # Send message
-            send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-            message_sent = True
+            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
             continue
 
         # Check which node fields have changed
@@ -144,8 +140,7 @@ def check_node_status(context):
             local_node['delegator_shares'] = remote_node['delegator_shares']
 
             # Send message
-            send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
-            message_sent = True
+            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     for address in delete_addresses:
         del user_data['nodes'][address]
@@ -172,12 +167,12 @@ def check_price_feeder(context):
             user_data['is_price_feed_healthy'] = False
             text = 'Price feed is not healthy anymore! 💀' + '\n' + \
                    'Address: ' + address
-            send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
         elif user_data['is_price_feed_healthy'] == False and is_price_feed_currently_healthy:
             user_data['is_price_feed_healthy'] = True
             text = 'Price feed is healthy again! 👌' + '\n' + \
                    'Address: ' + address + '\n'
-            send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
 
 def check_node_catch_up_status(context):
@@ -203,13 +198,13 @@ def check_node_catch_up_status(context):
                'IP: ' + NODE_IP + '\n' + \
                'Current block height: ' + block_height + '\n\n' + \
                'Please check your Terra Node immediately!'
-        send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+        try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
     elif user_data['is_catching_up'] == True and not is_currently_catching_up:
         user_data['is_catching_up'] = False
         text = 'The node caught up to the latest block height again! 👌' + '\n' + \
                'IP: ' + NODE_IP + '\n' + \
                'Current block height: ' + block_height
-        send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+        try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
 
 def check_node_block_height(context):
@@ -235,7 +230,7 @@ def check_node_block_height(context):
             text = 'Block height is increasing again! 👌' + '\n' + \
                    'IP: ' + NODE_IP + '\n' + \
                    'Block height now at: ' + block_height + '\n'
-            send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+            try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
             user_data['block_height_stuck_count'] = -1
         else:
             user_data['block_height_stuck_count'] = 0
@@ -249,7 +244,7 @@ def check_node_block_height(context):
                'IP: ' + NODE_IP + '\n' + \
                'Block height stuck at: ' + block_height + '\n\n' + \
                'Please check your Terra Node immediately!'
-        send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+        try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     # Show buttons if there were changes or block height just got (un)stuck
     # Stuck count:
@@ -303,7 +298,7 @@ def check_new_goverance_proposal(context, governance_proposals):
                'Make sure to vote on this governance proposal until *' + voting_end_time.strftime(
             "%A %B %d, %H:%M") + ' UTC*!'
 
-        send_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
+        try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
     user_data['governance_proposals_count'] = governance_proposals_count
 
