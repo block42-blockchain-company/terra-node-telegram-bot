@@ -1,0 +1,15 @@
+name: sonarqube
+on:
+  workflow_dispatch:
+
+jobs:
+  sonarqube:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download sonarqube
+      run: wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.5.0.2216-linux.zip
+    - name: Install sonarqube
+      run: unzip sonar-scanner-cli-4.5.0.2216-linux.zip
+    - name: run sonarqube
+      run: ./sonar-scanner-4.5.0.2216-linux/bin/sonar-scanner -Dsonar.projectKey=${GITHUB_REPOSITORY#*/} -Dsonar.sources=. -Dsonar.host.url=${{ secrets.SONARQUBE_ADDRESS }} -Dsonar.login=${{ secrets.SONARQUBE_TOKEN }}
