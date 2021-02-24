@@ -1,3 +1,6 @@
+import atexit
+import subprocess
+
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from telegram import TelegramError
 
@@ -106,7 +109,7 @@ def main():
     LCD endpoint: {LCD_ENDPOINT}
     Sentry nodes: {SENTRY_NODES}
     Node IP: {NODE_IP}
-    MNEMONIC: {"SET" if MNEMONIC else "NOT SET"}
+    WHITELISTED USERS: {ALLOWED_USER_IDS}
     ==========================================================================
     ==========================================================================
     """)
