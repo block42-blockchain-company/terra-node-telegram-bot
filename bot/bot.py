@@ -73,9 +73,8 @@ def setup_existing_user(dispatcher):
 
         # Somehow session.data does not get updated if all users block the bot.
         # That's why we delete the file ourselves.
-        if len(dispatcher.persistence.user_data) == 0:
-            if os.path.exists(session_data_path):
-                os.remove(session_data_path)
+        if len(dispatcher.persistence.user_data) == 0 and os.path.exists(session_data_path):
+            os.remove(session_data_path)
 
 
 def main():
@@ -110,7 +109,7 @@ def main():
     LCD endpoint: {LCD_ENDPOINT}
     Sentry nodes: {SENTRY_NODES}
     Node IP: {NODE_IP}
-    MNEMONIC: {"SET" if MNEMONIC else "NOT SET"}
+    WHITELISTED USERS: {ALLOWED_USER_IDS}
     ==========================================================================
     ==========================================================================
     """)

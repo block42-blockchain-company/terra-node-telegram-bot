@@ -68,14 +68,14 @@ def dispatch_query(update, context):
         call = delete_node
     elif data == 'show_detail_menu':
         call = show_detail_menu
-    elif data == 'governance_all':
+    elif data == 'proposals_show_all':
         call = on_show_all_proposals_clicked
     elif data == 'governance_active':
         call = on_show_active_proposals_clicked
     elif re.match('proposal', data):
         call = vote_on_proposal_details
     elif data.startswith('vote_confirmed'):
-        call = vote_accept
+        call = on_vote_confirmed
     elif data.startswith('vote'):
         call = on_vote_clicked
 
@@ -89,9 +89,7 @@ def dispatch_query(update, context):
                                                   chat_id=update.callback_query.message.chat_id,
                                                   message_id=update.callback_query.message.message_id)
         except BadRequest as e:
-            if 'Message is not modified' in e.message:
-                pass
-            else:
+            if 'Message is not modified' not in e.message:
                 raise
 
     if call:

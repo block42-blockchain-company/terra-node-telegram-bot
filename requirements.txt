@@ -1,5 +1,6 @@
-pyrogram==0.16.0
-requests==2.23.0
-python-telegram-bot==13.2
-tgcrypto==1.2.0
-jigu==0.1.4
+pyrogram~=0.16.0
+requests~=2.23.0
+python-telegram-bot~=13.2
+tgcrypto~=1.2.0
+python-dateutil~=2.8.1
+terra-sdk~=0.10.4

@@ -286,17 +286,8 @@ def check_new_goverance_proposal(context, governance_proposals):
     for i in range(new_proposals_count):
         current_proposal = governance_proposals[user_data['governance_proposals_count'] + i]
 
-        voting_start_time = current_proposal.voting_start_time
-        voting_end_time = current_proposal.voting_end_time
-
-        text = 'A new governance proposal got submitted! 📣\n\n' + \
-               '*Title:*\n' + current_proposal.content.title + '\n' + \
-               '*Type:*\n' + current_proposal.content.type + '\n' + \
-               '*Description:*\n' + current_proposal.content.description + '\n\n' + \
-               '*Voting Start Time:* ' + voting_start_time.strftime("%A %B %d, %H:%M") + ' UTC\n' + \
-               '*Voting End Time:* ' + voting_end_time.strftime("%A %B %d, %H:%M") + ' UTC\n\n' + \
-               'Make sure to vote on this governance proposal until *' + voting_end_time.strftime(
-            "%A %B %d, %H:%M") + ' UTC*!'
+        text = 'A new governance proposal got submitted! 📣\n\n'
+        text += proposal_to_text(current_proposal)
 
         try_message_to_all_platforms(context=context, chat_id=chat_id, text=text)
 
@@ -306,22 +297,22 @@ def check_new_goverance_proposal(context, governance_proposals):
 def check_results_of_proposals(context, governance_proposals):
     user_data = context.job.context['user_data']
 
-    active_proposals = list(filter(lambda p: p.proposal_status == 'VotingPeriod', governance_proposals))
+    active_proposals = list(filter(lambda p: p['proposal_status'] == 'VotingPeriod', governance_proposals))
     monitored_active_proposals = copy.deepcopy(user_data.setdefault('monitored_active_proposals', []))
 
     # save new proposals
     for proposal in active_proposals:
-        if proposal.id not in monitored_active_proposals:
-            user_data['monitored_active_proposals'].append(proposal.id)
+        if proposal['id'] not in monitored_active_proposals:
+            user_data['monitored_active_proposals'].append(proposal['id'])
 
     # send notifications
     for proposal_id in monitored_active_proposals:
-        is_past = proposal_id not in map(lambda p: p.id, active_proposals)
+        is_past = proposal_id not in map(lambda p: p['id'], active_proposals)
 
         if is_past:
-            past_proposal = next(filter(lambda p: p.id == proposal_id, governance_proposals), None)
+            past_proposal = next(filter(lambda p: p['id'] == proposal_id, governance_proposals), None)
             user_data['monitored_active_proposals'].remove(proposal_id)
-            results = past_proposal.final_tally_result
+            results = past_proposal['final_tally_result']
 
             message = "* ‼️ This proposal has ended ‼️*\n\n" \
                       f"{proposal_to_text(past_proposal)}\n\n" \

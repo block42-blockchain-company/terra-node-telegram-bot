@@ -1,14 +1,15 @@
 import json
 
 import requests
-from jigu.core.msg import MsgVote
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup, \
+    LoginUrl
 from requests.exceptions import RequestException
+from terra_sdk.core.gov import MsgVote
 
 from constants.constants import *
-from constants.messages import NETWORK_ERROR_MSG
+from constants.messages import NETWORK_ERROR_MSG, NO_PROPOSALS
 from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
-    proposal_to_text, get_my_vote, vote_on_proposal, is_wallet_provided, BadMnemonicException
+    proposal_to_text, get_my_vote, vote_on_proposal
 
 """
 ######################################################################################################################################################
@@ -43,7 +44,7 @@ def show_my_nodes_menu_new_msg(context, chat_id):
 def show_governance_menu(context, chat_id):
     text = 'Click an option'
 
-    keyboard = [[InlineKeyboardButton("🗳 Show all proposals", callback_data='governance_all')],
+    keyboard = [[InlineKeyboardButton("🗳 Show all proposals", callback_data='proposals_show_all')],
                 [InlineKeyboardButton("🗳 ✅ Show active proposals and vote", callback_data='governance_active')]]
 
     try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -116,8 +117,11 @@ def on_show_all_proposals_clicked(update, context):
     messages = get_all_proposals_as_messages()
     query.edit_message_text("All proposals")
 
-    for message in messages:
-        try_message(context, query['message']['chat']['id'], message, reply_markup=None)
+    if len(messages) == 0:
+        try_message(context, query['message']['chat']['id'], NO_PROPOSALS, reply_markup=None)
+    else:
+        for message in messages:
+            try_message(context, query['message']['chat']['id'], message, reply_markup=None)
 
 
 def on_show_active_proposals_clicked(update, context):
@@ -136,10 +140,11 @@ def on_show_active_proposals_clicked(update, context):
     keyboard = [[]]
 
     if not active_proposals:
-        text += "No active proposals at the moment."
+        text += NO_PROPOSALS
     else:
         for proposal in active_proposals:
-            button = InlineKeyboardButton(str(proposal.content.title), callback_data=f'proposal-{proposal.id}')
+            button = InlineKeyboardButton(str(proposal['content']['value']['title']),
+                                          callback_data=f'proposal-{proposal["id"]}')
             keyboard.append([button])
 
     try_message(context=context,
@@ -154,8 +159,9 @@ def vote_on_proposal_details(update, context):
     user_id = query.from_user['id']
 
     try:
-        proposal = get_proposal_by_id(proposal_id)
-        context.user_data.setdefault('proposals_cache', {})[proposal_id] = {'title': proposal.content.title}
+        proposal = get_proposal_by_id(int(proposal_id))
+        context.user_data.setdefault('proposals_cache', {})[proposal_id] = {
+            'title': proposal['content']['value']['title']}
     except Exception as e:
         logger.error(e)
         query.edit_message_text(NETWORK_ERROR_MSG)
@@ -164,10 +170,7 @@ def vote_on_proposal_details(update, context):
     keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
     message = ''
 
-    if not is_wallet_provided():
-        message = f"😢 *You can't vote, no MNEMONIC key provided.*\n" \
-                  f"Please visit https://station.terra.money/governance to vote.😢"
-    elif user_id not in ALLOWED_USER_IDS:
+    if user_id not in ALLOWED_USER_IDS:
         message = f'😢 *You are not allowed to vote because your id ({user_id}) is not whitelisted!* 😢'
     else:
         try:
@@ -202,30 +205,29 @@ def on_vote_clicked(update, context):
     query = update.callback_query
     _, proposal_id, vote = query.data.split("-")
     proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
-
-    keyboard = [[
-        InlineKeyboardButton('YES ✅', callback_data=f'vote_confirmed-{proposal_id}-{vote}'),
-        InlineKeyboardButton('NO ❌', callback_data=f'proposal-{proposal_id}')
-    ]]
-    text = f'⚠️ Do you really want to vote *{vote}* on proposal *{proposal_title}*? ⚠️'
+    login_url = LoginUrl(url=f'{VOTING_ENDPOINT}?id={proposal_id}&vote={vote}', bot_username=BLOCK42_TERRA_BOT_USERNAME)
+    keyboard = [
+        [InlineKeyboardButton('YES ✅ (open website)', login_url=login_url),
+         InlineKeyboardButton('Go back ❌', callback_data=f'proposal-{proposal_id}')
+         ]]
+    text = f'⚠️ Do you really want to vote *{vote}* on proposal *{proposal_title}*? ⚠\n' \
+           f'You will be redirected to the website where you can confirm your vote using Terra Station widget.\n' \
+           f'Currently it only works with *Chrome*️'
 
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-def vote_accept(update, context):
+def on_vote_confirmed(update, context):
     query = update.callback_query
     _, proposal_id, vote = query.data.split("-")
     proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
     keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data=f'proposal-{proposal_id}')]]
 
+    LoginUrl(VOTING_ENDPOINT)
+
     try:
         vote_result = vote_on_proposal(proposal_id=proposal_id, vote_option=vote)
         logger.info(f"Voted successfully. Transaction result:\n{vote_result}")
-    except BadMnemonicException as e:
-        logger.error(e, exc_info=True)
-        query.edit_message_text('😱 Your mnemonic key is incorrect! 😱.',
-                                reply_markup=InlineKeyboardMarkup(keyboard))
-        return
     except Exception as e:
         logger.error(e)
         message = NETWORK_ERROR_MSG
@@ -286,9 +288,8 @@ def try_message(context, chat_id, text, reply_markup=None, remove_job_when_block
 
             # Somehow session.data does not get updated if all users block the bot.
             # That makes problems on bot restart. That's why we delete the file ourselves.
-            if len(context.dispatcher.persistence.user_data) == 0:
-                if os.path.exists("./storage/session.data"):
-                    os.remove("./storage/session.data")
+            if len(context.dispatcher.persistence.user_data) == 0 and os.path.exists("./storage/session.data"):
+                os.remove("./storage/session.data")
 
             if remove_job_when_blocked:
                 context.job.schedule_removal()
@@ -307,7 +308,7 @@ def add_node_to_user_data(user_data, address, node):
     user_data['nodes'][address]['delegator_shares'] = node['delegator_shares']
 
 
-def get_validators() -> dict:
+def get_validators() -> (dict, None):
     """
     Return json of all validator nodes
     """
@@ -333,7 +334,7 @@ def get_validators() -> dict:
         return nodes['result']
 
 
-def get_validator(address) -> dict:
+def get_validator(address) -> (dict, None):
     """
     Return json of desired validator node
     """
