@@ -223,8 +223,6 @@ def on_vote_confirmed(update, context):
     proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
     keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data=f'proposal-{proposal_id}')]]
 
-    LoginUrl(VOTING_ENDPOINT)
-
     try:
         vote_result = vote_on_proposal(proposal_id=proposal_id, vote_option=vote)
         logger.info(f"Voted successfully. Transaction result:\n{vote_result}")
