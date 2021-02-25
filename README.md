@@ -39,9 +39,7 @@ Leave it empty or remove it to not get notified via Slack.
 variable empty or remove it to use the public `lcd.terra.dev` lcd server.
 
 Optionally set
-- `MNEMONIC` to your 24-word mnemonic phrase of your wallet you want to vote with
-- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to perform transactions. If you set a mnemonic
-phrase you *MUST* also set at least one allowed user id.
+- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to vote.
 Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
 - `SENTRY_NODES` comma separated list of your sentry nodes' LCD URLs if you want to monitor their sync status.
 
@@ -101,17 +99,12 @@ export SLACK_WEBHOOK=https://hooks.slack.com/services/T00000000/B00000000/XXXXXX
 ```
 ---
 ---
-- `MNEMONIC` to your 24-word mnemonic phrase of your wallet you want to vote with
-- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to perform transactions. If you set a mnemonic
-phrase you must also set at least one allowed user id.
+- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to vote.
 Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
 
 
-Optionally set 24-word mnemonic phrase and as `MNEMONIC` and whitelisted users that can perform protected operations
-(like voting) as `ALLOWED_USER_IDS`.
 ```
 export ALLOWED_USER_IDS=123,456
-export MNEMONIC=hello world hello world...
 ```
 ---
 - `SENTRY_NODES` comma separated list of your sentry nodes' LCD URLs if you want to monitor their sync status.

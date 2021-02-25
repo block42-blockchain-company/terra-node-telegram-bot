@@ -22,12 +22,7 @@ if DEBUG:
 else:
     NODE_IP = os.environ.get('NODE_IP') if os.environ.get('NODE_IP') else None
 
-MNEMONIC = os.environ.get('MNEMONIC', '')
-
-if MNEMONIC:
-    ALLOWED_USER_IDS = read_list_from_env('ALLOWED_USER_IDS', int)
-    if not ALLOWED_USER_IDS:
-        logger.warning("You set your mnemonic key but didn't set whitelisted telegram users!"
-                       " No one will be able to invoke protected operations!")
-    else:
-        logger.warning(f"Users allowed to invoke protected operations: {str(ALLOWED_USER_IDS)}")
+ALLOWED_USER_IDS = read_list_from_env('ALLOWED_USER_IDS', int)
+if not ALLOWED_USER_IDS:
+    logger.warning("You didn't set whitelisted telegram users!"
+                   " No one will be able to invoke protected operations!")
