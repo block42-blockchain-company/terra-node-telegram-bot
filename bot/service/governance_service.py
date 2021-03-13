@@ -5,16 +5,12 @@ import dateutil.parser
 import requests
 from telegram.utils.helpers import escape_markdown
 
-from constants.constants import LCD_URL
+from constants.constants import LCD_ENDPOINT
 from constants.messages import NETWORK_ERROR_MSG
 
 
 def get_governance_proposals(params=None) -> List:
-    """
-    Return all governance proposals
-    """
-
-    response = requests.get(f'{LCD_URL}gov/proposals', params=params)
+    response = requests.get(f'{LCD_ENDPOINT}gov/proposals', params=params)
 
     if not response.ok:
         raise ConnectionError
@@ -40,23 +36,13 @@ def get_active_proposals() -> List:
     return get_governance_proposals({"status": 'VotingPeriod'})
 
 
-def get_proposal_by_id(proposal_id: int) -> dict:
-    response = requests.get(f'{LCD_URL}gov/proposals/{proposal_id}')
+def get_proposal(proposal_id: int) -> dict:
+    response = requests.get(f'{LCD_ENDPOINT}gov/proposals/{proposal_id}')
 
     if not response.ok:
         raise ConnectionError
 
     return response.json()['result']
-
-
-def get_my_vote(proposal_id: str):
-    # TODO: Implement me when backend ready!
-    return None
-
-
-def vote_on_proposal(proposal_id: int, vote_option: str) -> (bool, None):
-    # TODO: Implement me when backend ready!
-    pass
 
 
 def proposal_to_text(proposal: dict) -> str:
@@ -80,3 +66,12 @@ def proposal_to_text(proposal: dict) -> str:
 
 def terra_timestamp_to_datetime(timestamp: str) -> datetime:
     return dateutil.parser.parse(timestamp)
+
+
+def get_vote(wallet_addr, proposal_id) -> str:
+    response = requests.get(f'{LCD_ENDPOINT}/gov/proposals/{proposal_id}/votes/{wallet_addr}')
+
+    if not response.ok:
+        return None
+
+    return response.json()['result'].get('option', None)
