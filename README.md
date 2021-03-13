@@ -39,8 +39,6 @@ Leave it empty or remove it to not get notified via Slack.
 variable empty or remove it to use the public `lcd.terra.dev` lcd server.
 
 Optionally set
-- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to vote.
-Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
 - `SENTRY_NODES` comma separated list of your sentry nodes' LCD URLs if you want to monitor their sync status.
 
 
@@ -98,14 +96,6 @@ Optionally set the Slack Webhook that you previously created as the environment 
 export SLACK_WEBHOOK=https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
 ---
----
-- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to vote.
-Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
-
-
-```
-export ALLOWED_USER_IDS=123,456
-```
 ---
 - `SENTRY_NODES` comma separated list of your sentry nodes' LCD URLs if you want to monitor their sync status.
 ```
