@@ -3,7 +3,8 @@ from telegram.error import BadRequest
 
 from constants.constants import JOB_INTERVAL_IN_SECONDS
 from constants.messages import HELLO_MSG
-from handlers.governance_handlers import on_authorize_voting_clicked, on_show_governance_menu_clicked, on_vote_option_clicked, \
+from handlers.governance_handlers import on_authorize_voting_clicked, on_show_governance_menu_clicked, \
+    on_vote_option_clicked, \
     on_proposal_clicked, on_show_active_proposals_clicked, on_show_all_proposals_clicked, \
     on_vote_send_clicked
 from helpers import try_message_with_home_menu, show_my_nodes_menu_new_msg, show_detail_menu, get_home_menu_buttons, \
@@ -83,11 +84,11 @@ def dispatch_query(update, context):
         call = show_gov_menu
     elif data == 'proposals_show_all':
         call = on_show_all_proposals_clicked
-    elif data.startswith('governance_active'):
+    elif data == 'proposals_show_active':
         call = on_show_active_proposals_clicked
     elif data == 'authorize_voting':
         call = on_authorize_voting_clicked
-    elif data.startswith('proposal'):
+    elif data.startswith('proposal-'):
         call = on_proposal_clicked
     elif data.startswith('vote-'):
         call = on_vote_option_clicked

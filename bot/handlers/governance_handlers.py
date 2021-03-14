@@ -1,3 +1,5 @@
+from typing import Callable
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, LoginUrl
 from terra_sdk.core.gov import MsgVote
 
@@ -6,8 +8,8 @@ from constants.env_variables import NETWORK
 from constants.logger import logger
 from constants.messages import NO_PROPOSALS_MSG, NETWORK_ERROR_MSG, YOU_WILL_BE_REDIRECTED_MSG, BACK_BUTTON_MSG
 from helpers import try_message
-from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal, \
-    proposal_to_text, get_vote
+from service.governance_service import get_active_proposals, get_proposal, proposal_to_text, get_vote, \
+    get_governance_proposals
 from service.vote_delegation_service import get_wallet_addr, vote_delegated
 
 
@@ -27,7 +29,7 @@ def on_show_governance_menu_clicked(context, chat_id, user_id):
 
     keyboard = [
         [InlineKeyboardButton("🗳 ✅ Show active proposals and vote",
-                              callback_data='governance_active')],
+                              callback_data='proposals_show_active')],
         [InlineKeyboardButton("🗳 Show all proposals", callback_data='proposals_show_all')]]
 
     if user_wallet_addr is None:
@@ -40,15 +42,24 @@ def on_show_governance_menu_clicked(context, chat_id, user_id):
 
 def on_show_all_proposals_clicked(update, context):
     query = update.callback_query
+    _ = query.data.split("-")
 
-    messages = get_all_proposals_as_messages()
-    query.edit_message_text("All proposals")
+    try:
+        proposals = get_governance_proposals()
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        try_message(context=context, chat_id=query['message']['chat']['id'], text=NETWORK_ERROR_MSG)
+        return
 
-    if len(messages) == 0:
-        try_message(context, query['message']['chat']['id'], NO_PROPOSALS_MSG, reply_markup=None)
-    else:
-        for message in messages:
-            try_message(context, query['message']['chat']['id'], message, reply_markup=None)
+    title = '🗳 ✅ **All proposals**🗳 ✅ \n' \
+            'Click on any of the proposals to see details.\n\n'
+
+    def button_builder(proposal_title: str, proposal_id: str) -> InlineKeyboardButton:
+        return InlineKeyboardButton(proposal_title,
+                                    callback_data=f'proposal-{proposal_id}-0')  # 0 - open read only view
+
+    _display_proposals(proposals=proposals, query=query, title=title,
+                       button_builder=button_builder)
 
 
 def on_show_active_proposals_clicked(update, context):
@@ -62,28 +73,39 @@ def on_show_active_proposals_clicked(update, context):
         try_message(context=context, chat_id=query['message']['chat']['id'], text=NETWORK_ERROR_MSG)
         return
 
-    text = '🗳 ✅ **Active proposals**🗳 ✅ \n' \
-           'Click on any of the proposals to see details and vote options.\n\n'
+    title = '🗳 ✅ **Active proposals**🗳 ✅ \n' \
+            'Click on any of the proposals to see details and vote options.\n\n'
 
+    def button_builder(proposal_title: str, proposal_id: str) -> InlineKeyboardButton:
+        return InlineKeyboardButton(proposal_title,
+                                    callback_data=f'proposal-{proposal_id}-1')  # 0 - open read and vote view
+
+    _display_proposals(proposals=active_proposals, query=query, title=title,
+                       button_builder=button_builder)
+
+
+def _display_proposals(proposals: [], query, title: str,
+                       button_builder: Callable[[str, str], InlineKeyboardButton]):
     keyboard = [[]]
+    text = title
 
-    if not active_proposals:
+    if not proposals:
         text += NO_PROPOSALS_MSG
     else:
-        for proposal in active_proposals:
-            button = InlineKeyboardButton(str(proposal['content']['value']['title']),
-                                          callback_data=f'proposal-{proposal["id"]}')
+        for proposal in proposals:
+            button = button_builder(proposal['content']['value']['title'], proposal["id"])
             keyboard.append([button])
 
-    try_message(context=context,
-                chat_id=query['message']['chat']['id'],
-                text=text,
-                reply_markup=InlineKeyboardMarkup(keyboard))
+    keyboard.append([InlineKeyboardButton(BACK_BUTTON_MSG, callback_data='show_governance_menu')])
+    query.edit_message_text(text=text,
+                            reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 def on_proposal_clicked(update, context):
     query = update.callback_query
-    _, proposal_id = query.data.split("-")
+    _, proposal_id, votable = query.data.split("-")
+    votable = int(votable)
+    previous_view = 'proposals_show_active' if votable else 'proposals_show_all'
 
     try:
         proposal = get_proposal(int(proposal_id))
@@ -94,7 +116,7 @@ def on_proposal_clicked(update, context):
         query.edit_message_text(NETWORK_ERROR_MSG)
         return
 
-    keyboard = [[InlineKeyboardButton(BACK_BUTTON_MSG, callback_data='governance_active')]]
+    keyboard = [[InlineKeyboardButton(BACK_BUTTON_MSG, callback_data=previous_view)]]
     my_wallet = context.user_data['proposals_cache'].get('wallet', None)
     my_vote = None
 
@@ -105,18 +127,19 @@ def on_proposal_clicked(update, context):
     if my_wallet and my_vote:
         message += f'🎉 You voted *{my_vote}* 🎉'
     else:
-        keyboard = [
-            [
-                InlineKeyboardButton('✅ Yes', callback_data=f'vote-{proposal_id}-{MsgVote.YES}'),
-                InlineKeyboardButton('❌ No', callback_data=f'vote-{proposal_id}-{MsgVote.NO}'),
-            ],
-            [
-                InlineKeyboardButton('❌❌ No with veto',
-                                     callback_data=f'vote-{proposal_id}-{MsgVote.NO_WITH_VETO}'),
-                InlineKeyboardButton('🤷 Abstain', callback_data=f'vote-{proposal_id}-{MsgVote.ABSTAIN}'),
-            ],
-            [InlineKeyboardButton(BACK_BUTTON_MSG, callback_data='governance_active')]
-        ]
+        if votable:
+            keyboard = [
+                [
+                    InlineKeyboardButton('✅ Yes', callback_data=f'vote-{proposal_id}-{MsgVote.YES}'),
+                    InlineKeyboardButton('❌ No', callback_data=f'vote-{proposal_id}-{MsgVote.NO}'),
+                ],
+                [
+                    InlineKeyboardButton('❌❌ No with veto',
+                                         callback_data=f'vote-{proposal_id}-{MsgVote.NO_WITH_VETO}'),
+                    InlineKeyboardButton('🤷 Abstain', callback_data=f'vote-{proposal_id}-{MsgVote.ABSTAIN}'),
+                ],
+                [InlineKeyboardButton(BACK_BUTTON_MSG, callback_data='proposals_show_active')]
+            ]
 
     message += f"\n\n\n{proposal_to_text(proposal)}"
 
@@ -139,7 +162,7 @@ def on_vote_option_clicked(update, context):
 
     keyboard = [
         [yes_button,
-         InlineKeyboardButton(BACK_BUTTON_MSG, callback_data=f'proposal-{proposal_id}')]]
+         InlineKeyboardButton(BACK_BUTTON_MSG, callback_data=f'proposal-{proposal_id}-1')]]
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
@@ -163,7 +186,7 @@ def on_vote_send_clicked(update, context):
     query = update.callback_query
     _, proposal_id, vote = query.data.split("-")
     proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
-    keyboard = [[InlineKeyboardButton(BACK_BUTTON_MSG, callback_data=f'proposal-{proposal_id}')]]
+    keyboard = [[InlineKeyboardButton(BACK_BUTTON_MSG, callback_data=f'proposal-{proposal_id}-1')]]
 
     try:
         vote_result = vote_delegated(proposal_id=proposal_id, vote=vote, telegram_user_id=query.from_user['id'])

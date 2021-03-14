@@ -5,8 +5,8 @@ import dateutil.parser
 import requests
 from telegram.utils.helpers import escape_markdown
 
-from constants.constants import LCD_ENDPOINT
-from constants.messages import NETWORK_ERROR_MSG
+from constants.constants import LCD_ENDPOINT, TERRA_STATION_URL
+from constants.env_variables import NETWORK
 
 
 def get_governance_proposals(params=None) -> List:
@@ -16,20 +16,6 @@ def get_governance_proposals(params=None) -> List:
         raise ConnectionError
 
     return response.json()['result']
-
-
-def get_all_proposals_as_messages() -> List[str]:
-    try:
-        proposals = get_governance_proposals()
-    except ConnectionError:
-        return [NETWORK_ERROR_MSG]
-
-    message = []
-
-    for proposal in proposals:
-        message.append(proposal_to_text(proposal))
-
-    return message
 
 
 def get_active_proposals() -> List:
@@ -60,6 +46,9 @@ def proposal_to_text(proposal: dict) -> str:
     else:
         text += f"Make sure to vote on this governance proposal until" \
                 f" *{terra_timestamp_to_datetime(proposal['voting_end_time']).strftime('%A %B %d, %H:%M')} UTC*!"
+
+    text += f"\n\nClick here to see more details: [Terra Station]({TERRA_STATION_URL}proposal/{proposal['id']})\n" \
+            f"Make sure to choose *{NETWORK}* network."
 
     return text
 
