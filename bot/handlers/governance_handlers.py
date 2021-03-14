@@ -17,13 +17,13 @@ def on_show_governance_menu_clicked(context, chat_id, user_id):
     text = 'Click an option\n\n'
 
     user_wallet_addr = get_wallet_addr(user_id)
+    context.user_data.setdefault('proposals_cache', {})['wallet'] = user_wallet_addr
 
     if user_wallet_addr is None:
         text += "You haven't authorized voting, but you can still" \
                 " vote using Terra Station Extension on Chrome.\n" \
                 "To vote directly from Telegram use *Delegate voting* feature."
     else:
-        context.user_data.setdefault('proposals_cache', {})['wallet'] = user_wallet_addr
         text += 'You authorized voting! 🎉\n' \
                 'You can vote directly from Telegram.'
 
