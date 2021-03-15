@@ -11,7 +11,8 @@ Features:
 * Notifications about new **Governance Proposals**
 * Notifications about finished **Governance Proposals**
 * Notifications about syncing status changes of your **sentry nodes**
-* Voting on **Governance Proposals**
+* Voting on **Governance Proposals** from Terra Station Extension
+* Voting on **Governance Proposals** using delegation feature
 * Notifications on **Slack**
 
 If you have questions please open a [github](https://github.com/block42-blockchain-company/terra-node-telegram-bot/issues) 
@@ -52,6 +53,7 @@ Optionally set
 * [Run and test the bot](#run-and-test-the-bot)
 * [Production](#production)
   * [Docker](#docker)
+  * [Vote delegation](#vote-delegation)
 * [Testing](#testing)
   * [Create new Telegram Client](#create-new-telegram-client)
   * [Sign in to the new Telegram Client](#sign-in-to-the-new-telegram-client)
@@ -152,7 +154,6 @@ You can simulate that by manually editing `test/validators.json` and `test/statu
 Furthermore in DEBUG mode separate processes run `test/increase_block_height.py` and `test/update_price_feed.py`.
 The former artificially increases the block height so that there are no notifications that the block height got stuck,
 and the latter updates the price feed to prevent faulty notifications about the price feeder.
-
 ---
 If you are using a Jetbrains IDE (e.g. Pycharm), you can set these environment variables for your run 
 configuration which is very convenient for development 
@@ -223,6 +224,20 @@ This is the directory where your bot saves and retrieves the `session.data` file
 *Please note that as docker is intended for production,
 there is not the possibility for the `DEBUG` mode when using docker.*
 
+### <a name="vote-delegation">Vote delegation infrastructure</a>
+If you want to self host infrastructure for vote delegation - unfortunately you need to set it up 
+on your own as this feature is still in beta.
+
+To make it work you need to:
+- deploy [website](https://github.com/block42-blockchain-company/terra-telegram-bot-website)
+- deploy [backend](https://github.com/block42-blockchain-company/terra-telegram-bot-backend) and connect your own wallet
+- setup your own MongoDB database and connect with backend instance
+- set correct endpoints in `constants.py`
+
+If you don't do it you can still use all the features provided by the website using the instance 
+deployed by block42. Unfortunately, you can't use the backend instance (delegate the voting) as it
+ is set up to accept only request from one specific instance of the Telegram bot due to security
+ reasons.
 
 ## [Testing](#testing)
 
