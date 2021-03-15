@@ -224,7 +224,7 @@ This is the directory where your bot saves and retrieves the `session.data` file
 *Please note that as docker is intended for production,
 there is not the possibility for the `DEBUG` mode when using docker.*
 
-### <a name="vote-delegation">Vote delegation infrastructure</a>
+### [Vote delegation infrastructure](#vote-delegation)
 If you want to self host infrastructure for vote delegation - unfortunately you need to set it up 
 on your own as this feature is still in beta.
 
