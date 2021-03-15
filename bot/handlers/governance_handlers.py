@@ -78,7 +78,7 @@ def on_show_active_proposals_clicked(update, context):
 
     def button_builder(proposal_title: str, proposal_id: str) -> InlineKeyboardButton:
         return InlineKeyboardButton(proposal_title,
-                                    callback_data=f'proposal-{proposal_id}-1')  # 0 - open read and vote view
+                                    callback_data=f'proposal-{proposal_id}-1')  # 1 - open read and vote view
 
     _display_proposals(proposals=active_proposals, query=query, title=title,
                        button_builder=button_builder)

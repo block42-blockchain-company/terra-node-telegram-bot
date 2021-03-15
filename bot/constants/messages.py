@@ -11,7 +11,7 @@ HELLO_MSG = 'Hello there! I am your Node Monitoring Bot of the Terra network. ðŸ
             'I will notify you about changes of your node\'s *Jailed*, *Unbonded* or *Delegator Shares*, ' \
             'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
             'Moreover, I will notify you about finished and new *governance proposals*. ' \
-            'You can also directly *vote* on them using Terra Station Chrome widget!' \
+            'You can also directly *vote* on them using Terra Station Chrome widget or voting delegation feature!' \
             'If you provided IP to your sentry node - I will tell you about all changes of it\'s syncing status'
 BOT_STARTUP_MSG = """
  _____                                     _        _       _                                  _           _   
