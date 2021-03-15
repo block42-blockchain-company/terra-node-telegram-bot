@@ -53,7 +53,7 @@ Optionally set
 * [Run and test the bot](#run-and-test-the-bot)
 * [Production](#production)
   * [Docker](#docker)
-  * [Vote delegation](#vote-delegation)
+  * [Vote delegation infrastructure](#vote-delegation)
 * [Testing](#testing)
   * [Create new Telegram Client](#create-new-telegram-client)
   * [Sign in to the new Telegram Client](#sign-in-to-the-new-telegram-client)
