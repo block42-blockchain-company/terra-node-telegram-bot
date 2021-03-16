@@ -73,7 +73,7 @@ def on_show_active_proposals_clicked(update, context):
         try_message(context=context, chat_id=query['message']['chat']['id'], text=NETWORK_ERROR_MSG)
         return
 
-    title = '🗳 ✅ **Active proposals**🗳 ✅ \n' \
+    title = '🗳 ✅ *Active proposals*🗳 ✅ \n' \
             'Click on any of the proposals to see details and vote options.\n\n'
 
     def button_builder(proposal_title: str, proposal_id: str) -> InlineKeyboardButton:
@@ -98,7 +98,7 @@ def _display_proposals(proposals: [], query, title: str,
 
     keyboard.append([InlineKeyboardButton(BACK_BUTTON_MSG, callback_data='show_governance_menu')])
     query.edit_message_text(text=text,
-                            reply_markup=InlineKeyboardMarkup(keyboard))
+                            reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='markdown')
 
 
 def on_proposal_clicked(update, context):
@@ -168,7 +168,8 @@ def on_vote_option_clicked(update, context):
 
 def on_authorize_voting_clicked(update, _):
     text = "You are going to grant me the authorization for voting.\n" \
-           "I will *never* vote on your behalf except when you order me to do. 👮\n" \
+           "I'm [open source](https://github.com/block42-blockchain-company/terra-telegram-bot-backend)" \
+           " and I will *never* vote on your behalf except when you order me to do. 👮\n" \
            "If you confirm the authorization, you will be able to vote directly from any Telegram client" \
            " without accessing your wallet at all.\n\n"
     text += YOU_WILL_BE_REDIRECTED_MSG
@@ -179,7 +180,8 @@ def on_authorize_voting_clicked(update, _):
         InlineKeyboardButton(BACK_BUTTON_MSG, callback_data='show_governance_menu')
     ]]
 
-    update.callback_query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+    update.callback_query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard),
+                                            disable_web_page_preview=True)
 
 
 def on_vote_send_clicked(update, context):
