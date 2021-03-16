@@ -135,7 +135,8 @@ def try_message(context, chat_id, text, reply_markup=None, remove_job_when_block
     """
 
     try:
-        context.bot.send_message(chat_id, text, parse_mode='markdown', reply_markup=reply_markup)
+        context.bot.send_message(chat_id, text, parse_mode='markdown', reply_markup=reply_markup,
+                                 disable_web_page_preview=True)
     except TelegramError as e:
         if 'bot was blocked by the user' in e.message:
             logger.info("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")

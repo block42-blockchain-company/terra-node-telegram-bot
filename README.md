@@ -234,8 +234,7 @@ To make it work you need to:
 - setup your own MongoDB database and connect with backend instance
 - set correct endpoints in `constants.py`
 
-If you don't do it you can still use all the features provided by the website using the instance 
-deployed by block42. Unfortunately, you can't use the backend instance (delegate the voting) as it
+If you don't do it you can still vote through the website hosted by block42 using Terra Station Extension. Unfortunately, you can't use the backend instance (delegate the vote) as it
  is set up to accept only request from one specific instance of the Telegram bot due to security
  reasons.
 

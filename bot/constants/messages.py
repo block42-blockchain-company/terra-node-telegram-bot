@@ -12,7 +12,10 @@ HELLO_MSG = 'Hello there! I am your Node Monitoring Bot of the Terra network. ðŸ
             'if your *Block Height* gets stuck and if your *Price Feed* gets unhealthy!\n' \
             'Moreover, I will notify you about finished and new *governance proposals*. ' \
             'You can also directly *vote* on them using Terra Station Chrome widget or voting delegation feature!' \
-            ' If you provided IP to your sentry node - I will tell you about all changes of it\'s syncing status.'
+            ' If you provided IP to your sentry node - I will tell you about all changes of it\'s syncing status.\n\n' \
+            'We develop for the community and depend on your input, if you have any suggestions or issues with the bot' \
+            ' feel free to open an issue on' \
+            ' [project\'s Github page](https://github.com/block42-blockchain-company/terra-node-telegram-bot)!'
 BOT_STARTUP_MSG = """
  _____                                     _        _       _                                  _           _   
 |_   _|                                   | |      | |     | |                                | |         | |  
