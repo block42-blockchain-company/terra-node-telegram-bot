@@ -14,28 +14,34 @@ from service.vote_delegation_service import get_wallet_addr, vote_delegated
 
 
 def on_show_governance_menu_clicked(context, chat_id, user_id):
+    # TODO (23.03.21) Remove this variable and all it's usages when Terra Station Extension accepts VoteDelegation
+    # TODO transactions again
+    vote_delegation_disabled = True
+
     text = 'Click an option\n\n'
 
-    user_wallet_addr = get_wallet_addr(user_id)
-    context.user_data.setdefault('proposals_cache', {})['wallet'] = user_wallet_addr
+    if not vote_delegation_disabled:
+        user_wallet_addr = get_wallet_addr(user_id)
+        context.user_data.setdefault('proposals_cache', {})['wallet'] = user_wallet_addr
 
-    if user_wallet_addr is None:
-        text += "You haven't authorized voting but you can still" \
-                " vote using Terra Station Extension on Chrome.\n" \
-                "To vote directly from Telegram use *Delegate voting* feature."
-    else:
-        text += 'You authorized voting! 🎉\n' \
-                'You can vote directly from Telegram.'
+        if user_wallet_addr is None:
+            text += "You haven't authorized voting but you can still" \
+                    " vote using Terra Station Extension on Chrome.\n" \
+                    "To vote directly from Telegram use *Delegate voting* feature."
+        else:
+            text += 'You authorized voting! 🎉\n' \
+                    'You can vote directly from Telegram.'
 
     keyboard = [
         [InlineKeyboardButton("🗳 ✅ Show active proposals and vote",
                               callback_data='proposals_show_active')],
         [InlineKeyboardButton("🗳 Show all proposals", callback_data='proposals_show_all')]]
 
-    if user_wallet_addr is None:
-        keyboard.append(
-            [InlineKeyboardButton("📝 Authorize me and vote directly from Telegram!",
-                                  callback_data='authorize_voting')])
+    if not vote_delegation_disabled:
+        if user_wallet_addr is None:
+            keyboard.append(
+                [InlineKeyboardButton("📝 Authorize me and vote directly from Telegram!",
+                                      callback_data='authorize_voting')])
 
     try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
 
