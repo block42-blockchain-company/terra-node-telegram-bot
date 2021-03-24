@@ -11,7 +11,8 @@ Features:
 * Notifications about new **Governance Proposals**
 * Notifications about finished **Governance Proposals**
 * Notifications about syncing status changes of your **sentry nodes**
-* Voting on **Governance Proposals**
+* Voting on **Governance Proposals** from Terra Station Extension
+* Voting on **Governance Proposals** using delegation feature
 * Notifications on **Slack**
 
 If you have questions please open a [github](https://github.com/block42-blockchain-company/terra-node-telegram-bot/issues) 
@@ -39,8 +40,6 @@ Leave it empty or remove it to not get notified via Slack.
 variable empty or remove it to use the public `lcd.terra.dev` lcd server.
 
 Optionally set
-- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to vote.
-Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
 - `SENTRY_NODES` comma separated list of your sentry nodes' LCD URLs if you want to monitor their sync status.
 
 
@@ -54,6 +53,7 @@ Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` ar
 * [Run and test the bot](#run-and-test-the-bot)
 * [Production](#production)
   * [Docker](#docker)
+  * [Vote delegation infrastructure](#vote-delegation)
 * [Testing](#testing)
   * [Create new Telegram Client](#create-new-telegram-client)
   * [Sign in to the new Telegram Client](#sign-in-to-the-new-telegram-client)
@@ -98,14 +98,6 @@ Optionally set the Slack Webhook that you previously created as the environment 
 export SLACK_WEBHOOK=https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
 ---
----
-- `ALLOWED_USER_IDS` comma separated list of Telegram ids of users allowed to vote.
-Example of usage: `ALLOWED_USER_IDS=123,456` - users with ids `123` and `456` are allowed to perform transactions.
-
-
-```
-export ALLOWED_USER_IDS=123,456
-```
 ---
 - `SENTRY_NODES` comma separated list of your sentry nodes' LCD URLs if you want to monitor their sync status.
 ```
@@ -162,7 +154,6 @@ You can simulate that by manually editing `test/validators.json` and `test/statu
 Furthermore in DEBUG mode separate processes run `test/increase_block_height.py` and `test/update_price_feed.py`.
 The former artificially increases the block height so that there are no notifications that the block height got stuck,
 and the latter updates the price feed to prevent faulty notifications about the price feeder.
-
 ---
 If you are using a Jetbrains IDE (e.g. Pycharm), you can set these environment variables for your run 
 configuration which is very convenient for development 
@@ -233,6 +224,20 @@ This is the directory where your bot saves and retrieves the `session.data` file
 *Please note that as docker is intended for production,
 there is not the possibility for the `DEBUG` mode when using docker.*
 
+### [Vote delegation infrastructure](#vote-delegation)
+### ❌❌ Vote delegation is currently disabled because it's blocked by Terra Station Extension, Terra is working on solving this issue ❌❌
+If you want to self host infrastructure for vote delegation - unfortunately you need to set it up 
+on your own as this feature is still in beta.
+
+To make it work you need to:
+- deploy [website](https://github.com/block42-blockchain-company/terra-telegram-bot-website)
+- deploy [backend](https://github.com/block42-blockchain-company/terra-telegram-bot-backend) and connect your own wallet
+- setup your own MongoDB database and connect with backend instance
+- set correct endpoints in `constants.py`
+
+If you don't do it you can still vote through the website hosted by block42 using Terra Station Extension. Unfortunately, you can't use the backend instance (delegate the vote) as it
+ is set up to accept only request from one specific instance of the Telegram bot due to security
+ reasons.
 
 ## [Testing](#testing)
 

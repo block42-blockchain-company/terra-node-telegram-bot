@@ -1,7 +1,15 @@
+from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.error import BadRequest
 
-from constants.messages import HELLO_MESSAGE
-from jobs.jobs import *
+from constants.constants import JOB_INTERVAL_IN_SECONDS
+from constants.messages import HELLO_MSG
+from handlers.governance_handlers import on_authorize_voting_clicked, on_show_governance_menu_clicked, \
+    on_vote_option_clicked, \
+    on_proposal_clicked, on_show_active_proposals_clicked, on_show_all_proposals_clicked, \
+    on_vote_send_clicked
+from helpers import try_message_with_home_menu, show_my_nodes_menu_new_msg, show_detail_menu, get_home_menu_buttons, \
+    get_my_nodes_menu_buttons, get_validator, add_node_to_user_data, show_confirmation_menu, get_validators
+from jobs.jobs import node_checks
 
 
 def start(update, context):
@@ -22,7 +30,7 @@ def start(update, context):
         context.user_data['job_started'] = True
         context.user_data['nodes'] = {}
 
-    text = HELLO_MESSAGE
+    text = HELLO_MSG
 
     # Send message
     try_message_with_home_menu(context=context, chat_id=update.effective_chat.id, text=text)
@@ -60,7 +68,7 @@ def dispatch_query(update, context):
         call = confirm_delete_all_nodes
     elif data == 'delete_all_nodes':
         call = delete_all_nodes
-    elif re.match('node_details', data):
+    elif data.startswith('node_details'):
         call = node_details
     elif data == 'confirm_node_deletion':
         call = confirm_node_deletion
@@ -68,17 +76,24 @@ def dispatch_query(update, context):
         call = delete_node
     elif data == 'show_detail_menu':
         call = show_detail_menu
+    elif data == 'show_governance_menu':
+        def show_gov_menu(update, context):
+            on_show_governance_menu_clicked(context=context, chat_id=update.effective_chat.id,
+                                            user_id=update.effective_user['id'])
+
+        call = show_gov_menu
     elif data == 'proposals_show_all':
         call = on_show_all_proposals_clicked
-    elif data == 'governance_active':
+    elif data == 'proposals_show_active':
         call = on_show_active_proposals_clicked
-    elif re.match('proposal', data):
-        call = vote_on_proposal_details
-    elif data.startswith('vote_confirmed'):
-        call = on_vote_confirmed
-    elif data.startswith('vote'):
-        call = on_vote_clicked
-
+    elif data == 'authorize_voting':
+        call = on_authorize_voting_clicked
+    elif data.startswith('proposal-'):
+        call = on_proposal_clicked
+    elif data.startswith('vote-'):
+        call = on_vote_option_clicked
+    elif data.startswith('votesend-'):
+        call = on_vote_send_clicked
     else:
         edit = False
 
@@ -106,7 +121,8 @@ def plain_input(update, context):
     if message == '📡 My Nodes':
         return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
     elif message == '🗳 Governance':
-        return show_governance_menu(context=context, chat_id=update.effective_chat.id)
+        return on_show_governance_menu_clicked(context=context, chat_id=update.effective_chat.id,
+                                               user_id=update.message.from_user['id'])
     elif expected == 'add_node':
         context.user_data['expected'] = None
         return handle_add_node(update, context)
@@ -189,7 +205,7 @@ def confirm_add_all_nodes(update, context):
     return show_confirmation_menu(update=update, text=text, keyboard=keyboard)
 
 
-def confirm_delete_all_nodes(update, context):
+def confirm_delete_all_nodes(update, _):
     """
     Ask user if he really wants to delete all available nodes
     """
@@ -282,7 +298,3 @@ def delete_node(update, context):
     query.answer(text)
     query.edit_message_text(text)
     show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
-
-
-def log_error(update, context):
-    logger.error(f'There is an unhandled error!\n{context.error}\nUpdater: {update}')

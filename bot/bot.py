@@ -1,14 +1,17 @@
 import atexit
 import subprocess
 
+import os
 from telegram.ext import Updater, PicklePersistence, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from telegram import TelegramError
 
-from constants.constants import *
-from constants.messages import BOT_STARTUP_LOG, BOT_RESTARTED
+from constants.constants import JOB_INTERVAL_IN_SECONDS, session_data_path
+from constants.env_variables import TELEGRAM_BOT_TOKEN, SLACK_WEBHOOK, SENTRY_NODES, DEBUG, LCD_ENDPOINT, NODE_IP
+from constants.logger import logger
+from constants.messages import BOT_STARTUP_MSG, BOT_RESTARTED_MSG
 from jobs.sentry_jobs import setup_sentry_jobs
 from jobs.jobs import node_checks
-from message_handlers import start, cancel, dispatch_query, plain_input, log_error
+from handlers.message_handlers import start, cancel, dispatch_query, plain_input
 
 """
 ######################################################################################################################################################
@@ -50,7 +53,7 @@ def setup_existing_user(dispatcher):
     delete_chat_ids = []
     for chat_id in chat_ids:
         try:
-            dispatcher.bot.send_message(chat_id, BOT_RESTARTED)
+            dispatcher.bot.send_message(chat_id, BOT_RESTARTED_MSG)
             dispatcher.job_queue.run_repeating(node_checks,
                                                interval=JOB_INTERVAL_IN_SECONDS,
                                                context={
@@ -94,12 +97,9 @@ def main():
     dispatcher.add_handler(CallbackQueryHandler(dispatch_query, run_async=True))
     dispatcher.add_handler(MessageHandler(Filters.text, plain_input, run_async=True))
 
-    # log all errors
-    dispatcher.add_error_handler(log_error, run_async=True)
-
     # Start the bot
     bot.start_polling()
-    logger.info(BOT_STARTUP_LOG)
+    logger.info(BOT_STARTUP_MSG)
     logger.info(f"""
     ==========================================================================
     ==========================================================================
@@ -109,7 +109,6 @@ def main():
     LCD endpoint: {LCD_ENDPOINT}
     Sentry nodes: {SENTRY_NODES}
     Node IP: {NODE_IP}
-    WHITELISTED USERS: {ALLOWED_USER_IDS}
     ==========================================================================
     ==========================================================================
     """)

@@ -1,15 +1,16 @@
 import json
 
-import requests
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup, \
-    LoginUrl
-from requests.exceptions import RequestException
-from terra_sdk.core.gov import MsgVote
+import os
+from urllib.parse import urlparse
 
-from constants.constants import *
-from constants.messages import NETWORK_ERROR_MSG, NO_PROPOSALS
-from service.governance_service import get_all_proposals_as_messages, get_active_proposals, get_proposal_by_id, \
-    proposal_to_text, get_my_vote, vote_on_proposal
+import requests
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
+from requests.exceptions import RequestException
+
+from constants.constants import NODE_STATUSES, VALIDATORS_ENDPOINT, NODE_INFO_ENDPOINT, NODE_STATUS_ENDPOINT
+from constants.env_variables import SLACK_WEBHOOK, DEBUG
+from constants.logger import logger
+from constants.messages import BACK_BUTTON_MSG
 
 """
 ######################################################################################################################################################
@@ -35,17 +36,8 @@ def show_my_nodes_menu_new_msg(context, chat_id):
     user_data = context.user_data if context.user_data else context.job.context['user_data']
 
     keyboard = get_my_nodes_menu_buttons(user_data=user_data)
-    text = 'Click an address from the list below or add a node:' if len(keyboard) > 2 else 'You do not monitor any ' \
-                                                                                           'Terra Nodes yet.\nAdd a Node!'
-
-    try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-def show_governance_menu(context, chat_id):
-    text = 'Click an option'
-
-    keyboard = [[InlineKeyboardButton("🗳 Show all proposals", callback_data='proposals_show_all')],
-                [InlineKeyboardButton("🗳 ✅ Show active proposals and vote", callback_data='governance_active')]]
+    text = 'Click an address from the list below or add a node:' if len(keyboard) > 2 else \
+        'You do not monitor any Terra Nodes yet.\nAdd a Node!'
 
     try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -104,141 +96,11 @@ def show_detail_menu(update, context):
 
     keyboard = [[
         InlineKeyboardButton('➖ DELETE NODE', callback_data='confirm_node_deletion'),
-        InlineKeyboardButton('⬅️ BACK', callback_data='my_nodes')
+        InlineKeyboardButton(BACK_BUTTON_MSG, callback_data='my_nodes')
     ]]
 
     # Modify message
     query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-def on_show_all_proposals_clicked(update, context):
-    query = update.callback_query
-
-    messages = get_all_proposals_as_messages()
-    query.edit_message_text("All proposals")
-
-    if len(messages) == 0:
-        try_message(context, query['message']['chat']['id'], NO_PROPOSALS, reply_markup=None)
-    else:
-        for message in messages:
-            try_message(context, query['message']['chat']['id'], message, reply_markup=None)
-
-
-def on_show_active_proposals_clicked(update, context):
-    query = update.callback_query
-
-    try:
-        active_proposals = get_active_proposals()
-    except Exception as e:
-        logger.error(e, exc_info=True)
-        try_message(context=context, chat_id=query['message']['chat']['id'], text=NETWORK_ERROR_MSG)
-        return
-
-    text = '🗳 ✅ **Active proposals**🗳 ✅ \n' \
-           'Click on any of the proposals to see details and vote options.\n\n'
-
-    keyboard = [[]]
-
-    if not active_proposals:
-        text += NO_PROPOSALS
-    else:
-        for proposal in active_proposals:
-            button = InlineKeyboardButton(str(proposal['content']['value']['title']),
-                                          callback_data=f'proposal-{proposal["id"]}')
-            keyboard.append([button])
-
-    try_message(context=context,
-                chat_id=query['message']['chat']['id'],
-                text=text,
-                reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-def vote_on_proposal_details(update, context):
-    query = update.callback_query
-    proposal_id = query.data.split("-")[-1]
-    user_id = query.from_user['id']
-
-    try:
-        proposal = get_proposal_by_id(int(proposal_id))
-        context.user_data.setdefault('proposals_cache', {})[proposal_id] = {
-            'title': proposal['content']['value']['title']}
-    except Exception as e:
-        logger.error(e)
-        query.edit_message_text(NETWORK_ERROR_MSG)
-        return
-
-    keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]]
-    message = ''
-
-    if user_id not in ALLOWED_USER_IDS:
-        message = f'😢 *You are not allowed to vote because your id ({user_id}) is not whitelisted!* 😢'
-    else:
-        try:
-            my_vote = get_my_vote(proposal_id)
-        except Exception as e:
-            logger.error(e, exc_info=True)
-            query.edit_message_text(NETWORK_ERROR_MSG)
-            return
-
-        if my_vote:
-            message = f'🎉 You voted *{my_vote}* 🎉'
-        else:
-            keyboard = [
-                [
-                    InlineKeyboardButton('✅ Yes', callback_data=f'vote-{proposal_id}-{MsgVote.YES}'),
-                    InlineKeyboardButton('❌ No', callback_data=f'vote-{proposal_id}-{MsgVote.NO}'),
-                ],
-                [
-                    InlineKeyboardButton('❌❌ No with veto',
-                                         callback_data=f'vote-{proposal_id}-{MsgVote.NO_WITH_VETO}'),
-                    InlineKeyboardButton('🤷 Abstain', callback_data=f'vote-{proposal_id}-{MsgVote.ABSTAIN}'),
-                ],
-                [InlineKeyboardButton('⬅️ BACK', callback_data='governance_active')]
-            ]
-
-    message += f"\n\n\n{proposal_to_text(proposal)}"
-
-    query.edit_message_text(message, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-def on_vote_clicked(update, context):
-    query = update.callback_query
-    _, proposal_id, vote = query.data.split("-")
-    proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
-    login_url = LoginUrl(url=f'{VOTING_ENDPOINT}?id={proposal_id}&vote={vote}', bot_username=BLOCK42_TERRA_BOT_USERNAME)
-    keyboard = [
-        [InlineKeyboardButton('YES ✅ (open website)', login_url=login_url),
-         InlineKeyboardButton('Go back ❌', callback_data=f'proposal-{proposal_id}')
-         ]]
-    text = f'⚠️ Do you really want to vote *{vote}* on proposal *{proposal_title}*? ⚠\n' \
-           f'You will be redirected to the website where you can confirm your vote using Terra Station widget.\n' \
-           f'Currently it only works with *Chrome*️'
-
-    query.edit_message_text(text, parse_mode='markdown', reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-def on_vote_confirmed(update, context):
-    query = update.callback_query
-    _, proposal_id, vote = query.data.split("-")
-    proposal_title = context.user_data['proposals_cache'][proposal_id]['title']
-    keyboard = [[InlineKeyboardButton('⬅️ BACK', callback_data=f'proposal-{proposal_id}')]]
-
-    try:
-        vote_result = vote_on_proposal(proposal_id=proposal_id, vote_option=vote)
-        logger.info(f"Voted successfully. Transaction result:\n{vote_result}")
-    except Exception as e:
-        logger.error(e)
-        message = NETWORK_ERROR_MSG
-        if hasattr(e, 'doc'):
-            message = "😱 There was an error while voting 😱.\n Error details:\n\n"
-            message += e.doc
-
-        query.edit_message_text(message, reply_markup=InlineKeyboardMarkup(keyboard))
-        return
-
-    query.edit_message_text(f"Successfully voted *{vote}* on proposal *{proposal_title}*.",
-                            parse_mode='markdown',
-                            reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 def show_confirmation_menu(update, text, keyboard):
@@ -275,7 +137,8 @@ def try_message(context, chat_id, text, reply_markup=None, remove_job_when_block
     """
 
     try:
-        context.bot.send_message(chat_id, text, parse_mode='markdown', reply_markup=reply_markup)
+        context.bot.send_message(chat_id, text, parse_mode='markdown', reply_markup=reply_markup,
+                                 disable_web_page_preview=True)
     except TelegramError as e:
         if 'bot was blocked by the user' in e.message:
             logger.info("Telegram user " + str(chat_id) + " blocked me; removing him from the user list")
@@ -424,3 +287,11 @@ def get_price_feed_prevotes(address):
                         "/prevotes")
             raise ConnectionError
         return response.json()
+
+
+def parse_url_from_env(ip):
+    ip = ip if ip.endswith('/') else f'{ip}/'
+    if not urlparse(ip).scheme:
+        ip = f'http://{ip}'
+
+    return ip

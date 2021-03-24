@@ -1,7 +1,8 @@
 from constants.constants import SENTRY_JOB_INTERVAL_IN_SECONDS
 from constants.env_variables import SENTRY_NODES
-from constants.messages import NODE_STARTED_SYNCING, NODE_FINISHED_SYNCING
-from helpers import logger, try_message_to_all_chats_and_platforms
+from constants.logger import logger
+from constants.messages import NODE_STARTED_SYNCING_MSG, NODE_FINISHED_SYNCING_MSG
+from helpers import try_message_to_all_chats_and_platforms
 from service.network_service import is_syncing
 
 
@@ -33,9 +34,9 @@ def check_sentry_node_status(node_ip, sentry_nodes_data) -> [None, str]:
         sentry_nodes_data[node_ip]['syncing'] = is_currently_syncing
 
         if is_currently_syncing:
-            text = NODE_STARTED_SYNCING.format(node_ip)
+            text = NODE_STARTED_SYNCING_MSG.format(node_ip)
         else:
-            text = NODE_FINISHED_SYNCING.format(node_ip)
+            text = NODE_FINISHED_SYNCING_MSG.format(node_ip)
 
         return text
     else:

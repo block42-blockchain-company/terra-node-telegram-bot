@@ -1,6 +1,12 @@
 import copy
-from helpers import *
-from constants.constants import *
+
+import requests
+
+from constants.constants import NODE_STATUS_ENDPOINT, NODE_STATUSES
+from constants.env_variables import NODE_IP
+from constants.logger import logger
+from helpers import is_lcd_reachable, try_message_to_all_platforms, get_validator, is_price_feed_healthy, \
+    is_node_catching_up, get_node_block_height, try_message
 from service.governance_service import get_governance_proposals, proposal_to_text
 
 """
@@ -122,17 +128,20 @@ def check_node_status(context):
 
         # Check if there are any changes
         if len(changed_fields) > 0:
-            text = 'Node: *' + address + '*\n' + \
-                   'Status: *' + NODE_STATUSES[local_node['status']]
+            text = f'Node: *{address}*\n' \
+                   f'Status: *{NODE_STATUSES[local_node["status"]]}*'
             if 'status' in changed_fields:
-                text += '* ➡️ *' + NODE_STATUSES[remote_node['status']]
-            text += '*\nJailed: *' + str(local_node['jailed'])
+                text += f' ➡️ *{NODE_STATUSES[remote_node["status"]]}*'
+            text += f'\nJailed: *{local_node["jailed"]}*'
             if 'jailed' in changed_fields:
-                text += '* ➡️ *' + str(remote_node['jailed'])
-            text += '*\nDelegator Shares: *' + str(int(float(local_node['delegator_shares'])))
+                text += f' ➡️ *{remote_node["jailed"]}*'
+            local_delegator_shares = int(float(local_node["delegator_shares"]))
+            text += f'\nDelegator Shares: *{local_delegator_shares}*'
             if 'delegator_shares' in changed_fields:
-                text += '* ➡️ *' + str(int(float(remote_node['delegator_shares'])))
-            text += '*'
+                remote_delegator_shares = int(float(remote_node['delegator_shares']))
+                delta = remote_delegator_shares - local_delegator_shares
+                delta = str(delta) if (delta < 0) else f"+{delta}"
+                text += f' ➡️ *{remote_delegator_shares}* (*Δ* {delta})'
 
             # Update data
             local_node['status'] = remote_node['status']
