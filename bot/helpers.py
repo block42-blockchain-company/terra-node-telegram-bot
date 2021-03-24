@@ -1,7 +1,6 @@
 import json
 
 import os
-from urllib.parse import urlparse
 
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
@@ -288,10 +287,3 @@ def get_price_feed_prevotes(address):
             raise ConnectionError
         return response.json()
 
-
-def parse_url_from_env(ip):
-    ip = ip if ip.endswith('/') else f'{ip}/'
-    if not urlparse(ip).scheme:
-        ip = f'http://{ip}'
-
-    return ip
