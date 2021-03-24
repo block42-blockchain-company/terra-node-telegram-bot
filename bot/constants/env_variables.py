@@ -2,6 +2,8 @@ import os
 
 import re
 
+from helpers import parse_url_from_env
+
 
 def read_list_from_env(name, required_type):
     return list(
@@ -11,7 +13,7 @@ def read_list_from_env(name, required_type):
 
 def get_lcd_url(network_mode: str, debug: bool) -> str:
     if 'LCD_ENDPOINT' in os.environ:
-        return os.environ['LCD_ENDPOINT']
+        return parse_url_from_env(os.environ['LCD_ENDPOINT'])
     else:
         if debug:
             return 'http://0.0.0.0:1317/'  # Localterra
