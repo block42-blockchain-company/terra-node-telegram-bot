@@ -12,7 +12,7 @@ def read_list_from_env(name, required_type):
 
 
 def get_lcd_url(network_mode: str, debug: bool) -> str:
-    if os.environ.get('LCD_ENDPOINT', ''):
+    if os.environ.get('LCD_ENDPOINT', '').strip():
         return parse_url_from_env(os.environ['LCD_ENDPOINT'])
     else:
         if debug:
