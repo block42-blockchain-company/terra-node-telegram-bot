@@ -13,12 +13,12 @@ def get_wallet_addr(telegram_user_id: str) -> Optional[str]:
     if not response.ok:
         return None
 
-    result = response.json()['result']
+    user = response.json()['result']
 
-    if result is None:
+    if user is None:
         return None
     else:
-        return result.get('walletAddress', None)
+        return user.get('walletAddress', None)
 
 
 def vote_delegated(proposal_id, vote, telegram_user_id):
