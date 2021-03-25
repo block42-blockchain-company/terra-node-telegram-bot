@@ -1,8 +1,7 @@
 import os
 
 import re
-
-from helpers import parse_url_from_env
+from urllib.parse import urlparse
 
 
 def read_list_from_env(name, required_type):
@@ -30,6 +29,14 @@ def get_node_ip(debug: bool) -> [str, None]:
         return 'localhost'
     else:
         return os.environ.get('NODE_IP') if os.environ.get('NODE_IP') else None
+
+
+def parse_url_from_env(ip):
+    ip = ip if ip.endswith('/') else f'{ip}/'
+    if not urlparse(ip).scheme:
+        ip = f'http://{ip}'
+
+    return ip
 
 
 DEBUG = bool(os.environ.get('DEBUG') == "True")
