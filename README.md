@@ -225,7 +225,6 @@ This is the directory where your bot saves and retrieves the `session.data` file
 there is not the possibility for the `DEBUG` mode when using docker.*
 
 ### [Vote delegation infrastructure](#vote-delegation)
-### ❌❌ Vote delegation is currently disabled because it's blocked by Terra Station Extension, Terra is working on solving this issue ❌❌
 If you want to self host infrastructure for vote delegation - unfortunately you need to set it up 
 on your own as this feature is still in beta.
 
