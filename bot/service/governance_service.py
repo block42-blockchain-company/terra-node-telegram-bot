@@ -57,8 +57,8 @@ def terra_timestamp_to_datetime(timestamp: str) -> datetime:
     return dateutil.parser.parse(timestamp)
 
 
-def get_vote(wallet_addr, proposal_id) -> str:
-    response = requests.get(f'{LCD_ENDPOINT}/gov/proposals/{proposal_id}/votes/{wallet_addr}')
+def get_vote(wallet_addr, proposal_id) -> [str, None]:
+    response = requests.get(f'{LCD_ENDPOINT}gov/proposals/{proposal_id}/votes/{wallet_addr}')
 
     if not response.ok:
         return None
