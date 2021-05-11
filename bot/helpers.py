@@ -216,12 +216,13 @@ def get_validator(address) -> (dict, None):
         return node
     else:
         response = requests.get(VALIDATORS_ENDPOINT + "/" + address)
+
         if response.status_code != 200:
-            if not is_lcd_reachable():
+            if response.status_code == 500 and ('validator does not exist' in response.json().get('error', '')):
+                return None
+            else:
                 logger.info("ConnectionError while requesting " + NODE_INFO_ENDPOINT)
                 raise ConnectionError
-            else:
-                return None
 
         node = response.json()
         return node['result']
