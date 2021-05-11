@@ -1,10 +1,10 @@
 import json
-
 import os
 
+import math
 import requests
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 from requests.exceptions import RequestException
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, TelegramError, KeyboardButton, ReplyKeyboardMarkup
 
 from constants.constants import NODE_STATUSES, VALIDATORS_ENDPOINT, NODE_INFO_ENDPOINT, NODE_STATUS_ENDPOINT
 from constants.env_variables import SLACK_WEBHOOK, DEBUG
@@ -27,18 +27,27 @@ def try_message_with_home_menu(context, chat_id, text, remove_job_when_blocked=T
                 remove_job_when_blocked=remove_job_when_blocked)
 
 
-def show_my_nodes_menu_new_msg(context, chat_id):
+def show_my_nodes_paginated(context, chat_id):
     """
     Show My Nodes Menu
     """
-
+    KEYBOARD_PAGE_SIZE = 30
     user_data = context.user_data if context.user_data else context.job.context['user_data']
-
     keyboard = get_my_nodes_menu_buttons(user_data=user_data)
     text = 'Click an address from the list below or add a node:' if len(keyboard) > 2 else \
         'You do not monitor any Terra Nodes yet.\nAdd a Node!'
 
-    try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+    if len(keyboard) < KEYBOARD_PAGE_SIZE:
+        try_message(context=context, chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard[:5]))
+    else:
+        pages = math.ceil(len(keyboard) / KEYBOARD_PAGE_SIZE)
+        for i in range(pages):
+            try_message(context=context,
+                        chat_id=chat_id,
+                        text=f"{text}\n(Page {i + 1} of {pages})",
+                        reply_markup=InlineKeyboardMarkup(
+                            keyboard[(i * KEYBOARD_PAGE_SIZE): ((i + 1) * KEYBOARD_PAGE_SIZE)]))
+            text = "Click an address from the list below or add a node:"
 
 
 def get_home_menu_buttons():
@@ -154,7 +163,8 @@ def try_message(context, chat_id, text, reply_markup=None, remove_job_when_block
             if remove_job_when_blocked:
                 context.job.schedule_removal()
         else:
-            logger.info("Got Error\n" + str(e) + "\nwith telegram user " + str(chat_id))
+            logger.error(e, exc_info=True)
+            logger.info("Telegram user " + str(chat_id))
 
 
 def add_node_to_user_data(user_data, address, node):
@@ -255,10 +265,7 @@ def is_price_feed_healthy(address):
     Check whether price feed is working properly
     """
 
-    try:
-        prevotes = get_price_feed_prevotes(address)
-    except ConnectionError:
-        raise
+    prevotes = get_price_feed_prevotes(address)
 
     for prevote in prevotes['result']:
         if int(prevote['submit_block']) < int(prevotes['height']) - 10:
@@ -286,4 +293,3 @@ def get_price_feed_prevotes(address):
                         "/prevotes")
             raise ConnectionError
         return response.json()
-

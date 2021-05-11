@@ -7,8 +7,8 @@ from handlers.governance_handlers import on_authorize_voting_clicked, on_show_go
     on_vote_option_clicked, \
     on_proposal_clicked, on_show_active_proposals_clicked, on_show_all_proposals_clicked, \
     on_vote_send_clicked
-from helpers import try_message_with_home_menu, show_my_nodes_menu_new_msg, show_detail_menu, get_home_menu_buttons, \
-    get_my_nodes_menu_buttons, get_validator, add_node_to_user_data, show_confirmation_menu, get_validators
+from helpers import try_message_with_home_menu, show_my_nodes_paginated, show_detail_menu, get_home_menu_buttons, \
+    get_validator, add_node_to_user_data, show_confirmation_menu, get_validators
 from jobs.jobs import node_checks
 
 
@@ -42,7 +42,7 @@ def cancel(update, context):
     """
 
     context.user_data['expected'] = None
-    show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+    show_my_nodes_paginated(context=context, chat_id=update.effective_chat.id)
 
 
 def dispatch_query(update, context):
@@ -57,7 +57,10 @@ def dispatch_query(update, context):
     if data == 'home':
         call = show_home_menu_edit_msg
     elif data == 'my_nodes':
-        call = show_my_nodes_menu_edit_msg
+        def show_nodes_from_back_button(update, context):
+            show_my_nodes_paginated(context=context, chat_id=update.effective_chat.id)
+
+        call = show_nodes_from_back_button
     elif data == 'add_node':
         call = add_node
     elif data == 'confirm_add_all_nodes':
@@ -119,7 +122,7 @@ def plain_input(update, context):
     message = update.message.text
     expected = context.user_data['expected'] if 'expected' in context.user_data else None
     if message == '📡 My Nodes':
-        return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+        return show_my_nodes_paginated(context=context, chat_id=update.effective_chat.id)
     elif message == '🗳 Governance':
         return on_show_governance_menu_clicked(context=context, chat_id=update.effective_chat.id,
                                                user_id=update.message.from_user['id'])
@@ -139,18 +142,6 @@ def show_home_menu_edit_msg(update, context):
     query.edit_message_text(text,
                             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
                             parse_mode='markdown')
-
-
-def show_my_nodes_menu_edit_msg(update, context):
-    """
-    Show My Nodes Menu
-    """
-
-    keyboard = get_my_nodes_menu_buttons(user_data=context.user_data)
-    text = 'Click an address from the list below or add a node:' if len(keyboard) > 2 else 'You do not monitor any ' \
-                                                                                           'Terra Nodes yet.\nAdd a Node!'
-    query = update.callback_query
-    query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 def add_node(update, context):
@@ -179,7 +170,7 @@ def handle_add_node(update, context):
     except ConnectionError:
         context.user_data['expected'] = None
         update.message.reply_text('⛔️ I cannot reach the LCD server!⛔\nPlease try again later.')
-        return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+        return show_my_nodes_paginated(context=context, chat_id=update.effective_chat.id)
 
     if node is None:
         context.user_data['expected'] = 'add_node'
@@ -188,7 +179,7 @@ def handle_add_node(update, context):
 
     add_node_to_user_data(context.user_data, address, node)
     context.bot.send_message(update.effective_chat.id, 'Got it! 👌')
-    return show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+    return show_my_nodes_paginated(context=context, chat_id=update.effective_chat.id)
 
 
 def confirm_add_all_nodes(update, context):
@@ -235,7 +226,7 @@ def add_all_nodes(update, context):
 
     # Send message
     query.edit_message_text('Added all Terra Nodes! 👌')
-    show_my_nodes_menu_new_msg(context, chat_id=update.effective_chat.id)
+    show_my_nodes_paginated(context, chat_id=update.effective_chat.id)
 
 
 def delete_all_nodes(update, context):
@@ -251,7 +242,7 @@ def delete_all_nodes(update, context):
     # Send message
     query.edit_message_text(text)
 
-    show_my_nodes_menu_new_msg(context, chat_id=update.effective_chat.id)
+    show_my_nodes_paginated(context, chat_id=update.effective_chat.id)
 
 
 def node_details(update, context):
@@ -297,4 +288,4 @@ def delete_node(update, context):
     text = "❌ Node address got deleted! ❌\n" + address
     query.answer(text)
     query.edit_message_text(text)
-    show_my_nodes_menu_new_msg(context=context, chat_id=update.effective_chat.id)
+    show_my_nodes_paginated(context=context, chat_id=update.effective_chat.id)
